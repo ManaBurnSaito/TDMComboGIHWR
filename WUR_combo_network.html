@@ -1,0 +1,321 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Dalkovan Packbeasts", "image": "img/Dalkovan_Packbeasts.png", "label": "Dalkovan Packbeasts", "shape": "image", "title": "Dalkovan Packbeasts"}, {"color": "#97c2fc", "id": "Duty Beyond Death", "image": "img/Duty_Beyond_Death.png", "label": "Duty Beyond Death", "shape": "image", "title": "Duty Beyond Death"}, {"color": "#97c2fc", "id": "Rally the Monastery", "image": "img/Rally_the_Monastery.png", "label": "Rally the Monastery", "shape": "image", "title": "Rally the Monastery"}, {"color": "#97c2fc", "id": "Salt Road Packbeast", "image": "img/Salt_Road_Packbeast.png", "label": "Salt Road Packbeast", "shape": "image", "title": "Salt Road Packbeast"}, {"color": "#97c2fc", "id": "Static Snare", "image": "img/Static_Snare.png", "label": "Static Snare", "shape": "image", "title": "Static Snare"}, {"color": "#97c2fc", "id": "Shocking Sharpshooter", "image": "img/Shocking_Sharpshooter.png", "label": "Shocking Sharpshooter", "shape": "image", "title": "Shocking Sharpshooter"}, {"color": "#97c2fc", "id": "War Effort", "image": "img/War_Effort.png", "label": "War Effort", "shape": "image", "title": "War Effort"}, {"color": "#97c2fc", "id": "Stormplain Detainment", "image": "img/Stormplain_Detainment.png", "label": "Stormplain Detainment", "shape": "image", "title": "Stormplain Detainment"}, {"color": "#97c2fc", "id": "Descendant of Storms", "image": "img/Descendant_of_Storms.png", "label": "Descendant of Storms", "shape": "image", "title": "Descendant of Storms"}, {"color": "#97c2fc", "id": "Fortress Kin-Guard", "image": "img/Fortress_Kin-Guard.png", "label": "Fortress Kin-Guard", "shape": "image", "title": "Fortress Kin-Guard"}, {"color": "#97c2fc", "id": "Mardu Devotee", "image": "img/Mardu_Devotee.png", "label": "Mardu Devotee", "shape": "image", "title": "Mardu Devotee"}, {"color": "#97c2fc", "id": "Underfoot Underdogs", "image": "img/Underfoot_Underdogs.png", "label": "Underfoot Underdogs", "shape": "image", "title": "Underfoot Underdogs"}, {"color": "#97c2fc", "id": "Sunpearl Kirin", "image": "img/Sunpearl_Kirin.png", "label": "Sunpearl Kirin", "shape": "image", "title": "Sunpearl Kirin"}, {"color": "#97c2fc", "id": "Teeming Dragonstorm", "image": "img/Teeming_Dragonstorm.png", "label": "Teeming Dragonstorm", "shape": "image", "title": "Teeming Dragonstorm"}, {"color": "#97c2fc", "id": "Osseous Exhale", "image": "img/Osseous_Exhale.png", "label": "Osseous Exhale", "shape": "image", "title": "Osseous Exhale"}, {"color": "#97c2fc", "id": "Dirgur Island Dragon", "image": "img/Dirgur_Island_Dragon.png", "label": "Dirgur Island Dragon", "shape": "image", "title": "Dirgur Island Dragon"}, {"color": "#97c2fc", "id": "Focus the Mind", "image": "img/Focus_the_Mind.png", "label": "Focus the Mind", "shape": "image", "title": "Focus the Mind"}, {"color": "#97c2fc", "id": "Iceridge Serpent", "image": "img/Iceridge_Serpent.png", "label": "Iceridge Serpent", "shape": "image", "title": "Iceridge Serpent"}, {"color": "#97c2fc", "id": "Riverwalk Technique", "image": "img/Riverwalk_Technique.png", "label": "Riverwalk Technique", "shape": "image", "title": "Riverwalk Technique"}, {"color": "#97c2fc", "id": "Roiling Dragonstorm", "image": "img/Roiling_Dragonstorm.png", "label": "Roiling Dragonstorm", "shape": "image", "title": "Roiling Dragonstorm"}, {"color": "#97c2fc", "id": "Sibsig Appraiser", "image": "img/Sibsig_Appraiser.png", "label": "Sibsig Appraiser", "shape": "image", "title": "Sibsig Appraiser"}, {"color": "#97c2fc", "id": "Unending Whisper", "image": "img/Unending_Whisper.png", "label": "Unending Whisper", "shape": "image", "title": "Unending Whisper"}, {"color": "#97c2fc", "id": "Equilibrium Adept", "image": "img/Equilibrium_Adept.png", "label": "Equilibrium Adept", "shape": "image", "title": "Equilibrium Adept"}, {"color": "#97c2fc", "id": "Twinmaw Stormbrood", "image": "img/Twinmaw_Stormbrood.png", "label": "Twinmaw Stormbrood", "shape": "image", "title": "Twinmaw Stormbrood"}, {"color": "#97c2fc", "id": "Dispelling Exhale", "image": "img/Dispelling_Exhale.png", "label": "Dispelling Exhale", "shape": "image", "title": "Dispelling Exhale"}, {"color": "#97c2fc", "id": "Wingblade Disciple", "image": "img/Wingblade_Disciple.png", "label": "Wingblade Disciple", "shape": "image", "title": "Wingblade Disciple"}, {"color": "#97c2fc", "id": "Jeskai Devotee", "image": "img/Jeskai_Devotee.png", "label": "Jeskai Devotee", "shape": "image", "title": "Jeskai Devotee"}, {"color": "#97c2fc", "id": "Molten Exhale", "image": "img/Molten_Exhale.png", "label": "Molten Exhale", "shape": "image", "title": "Molten Exhale"}, {"color": "#97c2fc", "id": "Sunset Strikemaster", "image": "img/Sunset_Strikemaster.png", "label": "Sunset Strikemaster", "shape": "image", "title": "Sunset Strikemaster"}, {"color": "#97c2fc", "id": "Channeled Dragonfire", "image": "img/Channeled_Dragonfire.png", "label": "Channeled Dragonfire", "shape": "image", "title": "Channeled Dragonfire"}, {"color": "#97c2fc", "id": "Fleeting Effigy", "image": "img/Fleeting_Effigy.png", "label": "Fleeting Effigy", "shape": "image", "title": "Fleeting Effigy"}, {"color": "#97c2fc", "id": "Bewildering Blizzard", "image": "img/Bewildering_Blizzard.png", "label": "Bewildering Blizzard", "shape": "image", "title": "Bewildering Blizzard"}, {"color": "#97c2fc", "id": "Kishla Trawlers", "image": "img/Kishla_Trawlers.png", "label": "Kishla Trawlers", "shape": "image", "title": "Kishla Trawlers"}, {"color": "#97c2fc", "id": "Temur Devotee", "image": "img/Temur_Devotee.png", "label": "Temur Devotee", "shape": "image", "title": "Temur Devotee"}, {"color": "#97c2fc", "id": "Narset\u0027s Rebuke", "image": "img/Narset\u0027s_Rebuke.png", "label": "Narset\u0027s Rebuke", "shape": "image", "title": "Narset\u0027s Rebuke"}, {"color": "#97c2fc", "id": "Stormshriek Feral", "image": "img/Stormshriek_Feral.png", "label": "Stormshriek Feral", "shape": "image", "title": "Stormshriek Feral"}, {"color": "#97c2fc", "id": "Runescale Stormbrood", "image": "img/Runescale_Stormbrood.png", "label": "Runescale Stormbrood", "shape": "image", "title": "Runescale Stormbrood"}, {"color": "#97c2fc", "id": "Fresh Start", "image": "img/Fresh_Start.png", "label": "Fresh Start", "shape": "image", "title": "Fresh Start"}, {"color": "#97c2fc", "id": "Spectral Denial", "image": "img/Spectral_Denial.png", "label": "Spectral Denial", "shape": "image", "title": "Spectral Denial"}, {"color": "#97c2fc", "id": "Veteran Ice Climber", "image": "img/Veteran_Ice_Climber.png", "label": "Veteran Ice Climber", "shape": "image", "title": "Veteran Ice Climber"}, {"color": "#97c2fc", "id": "Whirlwing Stormbrood", "image": "img/Whirlwing_Stormbrood.png", "label": "Whirlwing Stormbrood", "shape": "image", "title": "Whirlwing Stormbrood"}, {"color": "#97c2fc", "id": "Dragonstorm Forecaster", "image": "img/Dragonstorm_Forecaster.png", "label": "Dragonstorm Forecaster", "shape": "image", "title": "Dragonstorm Forecaster"}, {"color": "#97c2fc", "id": "Breaching Dragonstorm", "image": "img/Breaching_Dragonstorm.png", "label": "Breaching Dragonstorm", "shape": "image", "title": "Breaching Dragonstorm"}, {"color": "#97c2fc", "id": "Iridescent Tiger", "image": "img/Iridescent_Tiger.png", "label": "Iridescent Tiger", "shape": "image", "title": "Iridescent Tiger"}, {"color": "#97c2fc", "id": "Twin Bolt", "image": "img/Twin_Bolt.png", "label": "Twin Bolt", "shape": "image", "title": "Twin Bolt"}, {"color": "#97c2fc", "id": "Ringing Strike Mastery", "image": "img/Ringing_Strike_Mastery.png", "label": "Ringing Strike Mastery", "shape": "image", "title": "Ringing Strike Mastery"}, {"color": "#97c2fc", "id": "Highspire Bell-Ringer", "image": "img/Highspire_Bell-Ringer.png", "label": "Highspire Bell-Ringer", "shape": "image", "title": "Highspire Bell-Ringer"}, {"color": "#97c2fc", "id": "Humbling Elder", "image": "img/Humbling_Elder.png", "label": "Humbling Elder", "shape": "image", "title": "Humbling Elder"}, {"color": "#97c2fc", "id": "Snowmelt Stag", "image": "img/Snowmelt_Stag.png", "label": "Snowmelt Stag", "shape": "image", "title": "Snowmelt Stag"}, {"color": "#97c2fc", "id": "Meticulous Artisan", "image": "img/Meticulous_Artisan.png", "label": "Meticulous Artisan", "shape": "image", "title": "Meticulous Artisan"}, {"color": "#97c2fc", "id": "Overwhelming Surge", "image": "img/Overwhelming_Surge.png", "label": "Overwhelming Surge", "shape": "image", "title": "Overwhelming Surge"}, {"color": "#97c2fc", "id": "Ureni\u0027s Rebuff", "image": "img/Ureni\u0027s_Rebuff.png", "label": "Ureni\u0027s Rebuff", "shape": "image", "title": "Ureni\u0027s Rebuff"}]);
+                  edges = new vis.DataSet([{"from": "Dalkovan Packbeasts", "title": "Weight: 4.35", "to": "Duty Beyond Death", "value": 4.35}, {"from": "Dalkovan Packbeasts", "title": "Weight: 3.2", "to": "Rally the Monastery", "value": 3.2}, {"from": "Dalkovan Packbeasts", "title": "Weight: 3.03", "to": "Salt Road Packbeast", "value": 3.03}, {"from": "Dalkovan Packbeasts", "title": "Weight: 3.34", "to": "Static Snare", "value": 3.34}, {"from": "Dalkovan Packbeasts", "title": "Weight: 5.0", "to": "Shocking Sharpshooter", "value": 5.0}, {"from": "Dalkovan Packbeasts", "title": "Weight: 4.41", "to": "War Effort", "value": 4.41}, {"from": "Duty Beyond Death", "title": "Weight: 3.82", "to": "Fortress Kin-Guard", "value": 3.82}, {"from": "Duty Beyond Death", "title": "Weight: 5.09", "to": "Mardu Devotee", "value": 5.09}, {"from": "Duty Beyond Death", "title": "Weight: 3.63", "to": "Salt Road Packbeast", "value": 3.63}, {"from": "Duty Beyond Death", "title": "Weight: 3.86", "to": "Underfoot Underdogs", "value": 3.86}, {"from": "Rally the Monastery", "title": "Weight: 3.22", "to": "Salt Road Packbeast", "value": 3.22}, {"from": "Rally the Monastery", "title": "Weight: 3.22", "to": "Static Snare", "value": 3.22}, {"from": "Rally the Monastery", "title": "Weight: 4.9", "to": "Dirgur Island Dragon", "value": 4.9}, {"from": "Rally the Monastery", "title": "Weight: 3.91", "to": "Dispelling Exhale", "value": 3.91}, {"from": "Rally the Monastery", "title": "Weight: 3.01", "to": "Riverwalk Technique", "value": 3.01}, {"from": "Rally the Monastery", "title": "Weight: 6.37", "to": "Sibsig Appraiser", "value": 6.37}, {"from": "Rally the Monastery", "title": "Weight: 5.66", "to": "Wingblade Disciple", "value": 5.66}, {"from": "Rally the Monastery", "title": "Weight: 4.46", "to": "Equilibrium Adept", "value": 4.46}, {"from": "Rally the Monastery", "title": "Weight: 3.28", "to": "Jeskai Devotee", "value": 3.28}, {"from": "Rally the Monastery", "title": "Weight: 3.81", "to": "Molten Exhale", "value": 3.81}, {"from": "Rally the Monastery", "title": "Weight: 4.57", "to": "Sunset Strikemaster", "value": 4.57}, {"from": "Rally the Monastery", "title": "Weight: 3.21", "to": "Underfoot Underdogs", "value": 3.21}, {"from": "Rally the Monastery", "title": "Weight: 4.22", "to": "War Effort", "value": 4.22}, {"from": "Salt Road Packbeast", "title": "Weight: 3.36", "to": "Fortress Kin-Guard", "value": 3.36}, {"from": "Salt Road Packbeast", "title": "Weight: 3.19", "to": "Static Snare", "value": 3.19}, {"from": "Salt Road Packbeast", "title": "Weight: 4.25", "to": "Riverwalk Technique", "value": 4.25}, {"from": "Salt Road Packbeast", "title": "Weight: 3.72", "to": "Sibsig Appraiser", "value": 3.72}, {"from": "Salt Road Packbeast", "title": "Weight: 3.15", "to": "Wingblade Disciple", "value": 3.15}, {"from": "Salt Road Packbeast", "title": "Weight: 3.18", "to": "Fleeting Effigy", "value": 3.18}, {"from": "Salt Road Packbeast", "title": "Weight: 4.35", "to": "Shocking Sharpshooter", "value": 4.35}, {"from": "Salt Road Packbeast", "title": "Weight: 3.05", "to": "Sunset Strikemaster", "value": 3.05}, {"from": "Static Snare", "title": "Weight: 3.35", "to": "Fortress Kin-Guard", "value": 3.35}, {"from": "Static Snare", "title": "Weight: 3.28", "to": "Teeming Dragonstorm", "value": 3.28}, {"from": "Static Snare", "title": "Weight: 3.19", "to": "Sibsig Appraiser", "value": 3.19}, {"from": "Static Snare", "title": "Weight: 3.13", "to": "Unending Whisper", "value": 3.13}, {"from": "Shocking Sharpshooter", "title": "Weight: 3.03", "to": "Mardu Devotee", "value": 3.03}, {"from": "Shocking Sharpshooter", "title": "Weight: 4.46", "to": "Fleeting Effigy", "value": 4.46}, {"from": "War Effort", "title": "Weight: 3.36", "to": "Descendant of Storms", "value": 3.36}, {"from": "War Effort", "title": "Weight: 4.24", "to": "Mardu Devotee", "value": 4.24}, {"from": "War Effort", "title": "Weight: 3.06", "to": "Sunpearl Kirin", "value": 3.06}, {"from": "Stormplain Detainment", "title": "Weight: 3.2", "to": "Descendant of Storms", "value": 3.2}, {"from": "Stormplain Detainment", "title": "Weight: 3.64", "to": "Teeming Dragonstorm", "value": 3.64}, {"from": "Stormplain Detainment", "title": "Weight: 3.37", "to": "Bewildering Blizzard", "value": 3.37}, {"from": "Stormplain Detainment", "title": "Weight: 3.84", "to": "Kishla Trawlers", "value": 3.84}, {"from": "Stormplain Detainment", "title": "Weight: 5.85", "to": "Roiling Dragonstorm", "value": 5.85}, {"from": "Stormplain Detainment", "title": "Weight: 3.85", "to": "Sibsig Appraiser", "value": 3.85}, {"from": "Stormplain Detainment", "title": "Weight: 3.08", "to": "Unending Whisper", "value": 3.08}, {"from": "Mardu Devotee", "title": "Weight: 3.17", "to": "Sunpearl Kirin", "value": 3.17}, {"from": "Teeming Dragonstorm", "title": "Weight: 4.27", "to": "Osseous Exhale", "value": 4.27}, {"from": "Teeming Dragonstorm", "title": "Weight: 5.64", "to": "Dirgur Island Dragon", "value": 5.64}, {"from": "Teeming Dragonstorm", "title": "Weight: 5.12", "to": "Dispelling Exhale", "value": 5.12}, {"from": "Teeming Dragonstorm", "title": "Weight: 5.07", "to": "Focus the Mind", "value": 5.07}, {"from": "Teeming Dragonstorm", "title": "Weight: 5.84", "to": "Riverwalk Technique", "value": 5.84}, {"from": "Teeming Dragonstorm", "title": "Weight: 6.81", "to": "Roiling Dragonstorm", "value": 6.81}, {"from": "Teeming Dragonstorm", "title": "Weight: 3.8", "to": "Sibsig Appraiser", "value": 3.8}, {"from": "Teeming Dragonstorm", "title": "Weight: 3.03", "to": "Temur Devotee", "value": 3.03}, {"from": "Teeming Dragonstorm", "title": "Weight: 4.61", "to": "Unending Whisper", "value": 4.61}, {"from": "Teeming Dragonstorm", "title": "Weight: 3.58", "to": "Molten Exhale", "value": 3.58}, {"from": "Teeming Dragonstorm", "title": "Weight: 3.41", "to": "Narset\u0027s Rebuke", "value": 3.41}, {"from": "Teeming Dragonstorm", "title": "Weight: 3.63", "to": "Stormshriek Feral", "value": 3.63}, {"from": "Teeming Dragonstorm", "title": "Weight: 4.32", "to": "Sunset Strikemaster", "value": 4.32}, {"from": "Teeming Dragonstorm", "title": "Weight: 5.72", "to": "Runescale Stormbrood", "value": 5.72}, {"from": "Teeming Dragonstorm", "title": "Weight: 4.09", "to": "Twinmaw Stormbrood", "value": 4.09}, {"from": "Osseous Exhale", "title": "Weight: 3.41", "to": "Dirgur Island Dragon", "value": 3.41}, {"from": "Osseous Exhale", "title": "Weight: 4.07", "to": "Focus the Mind", "value": 4.07}, {"from": "Osseous Exhale", "title": "Weight: 3.79", "to": "Iceridge Serpent", "value": 3.79}, {"from": "Osseous Exhale", "title": "Weight: 3.04", "to": "Riverwalk Technique", "value": 3.04}, {"from": "Osseous Exhale", "title": "Weight: 7.81", "to": "Roiling Dragonstorm", "value": 7.81}, {"from": "Osseous Exhale", "title": "Weight: 5.29", "to": "Sibsig Appraiser", "value": 5.29}, {"from": "Osseous Exhale", "title": "Weight: 3.45", "to": "Unending Whisper", "value": 3.45}, {"from": "Osseous Exhale", "title": "Weight: 3.14", "to": "Equilibrium Adept", "value": 3.14}, {"from": "Osseous Exhale", "title": "Weight: 3.1", "to": "Twinmaw Stormbrood", "value": 3.1}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.06", "to": "Dispelling Exhale", "value": 3.06}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.85", "to": "Dragonstorm Forecaster", "value": 3.85}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.06", "to": "Fresh Start", "value": 3.06}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.15", "to": "Kishla Trawlers", "value": 3.15}, {"from": "Dirgur Island Dragon", "title": "Weight: 5.22", "to": "Roiling Dragonstorm", "value": 5.22}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.5", "to": "Sibsig Appraiser", "value": 3.5}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.64", "to": "Molten Exhale", "value": 3.64}, {"from": "Dirgur Island Dragon", "title": "Weight: 3.82", "to": "Sunset Strikemaster", "value": 3.82}, {"from": "Dirgur Island Dragon", "title": "Weight: 6.01", "to": "Twinmaw Stormbrood", "value": 6.01}, {"from": "Focus the Mind", "title": "Weight: 3.03", "to": "Dispelling Exhale", "value": 3.03}, {"from": "Focus the Mind", "title": "Weight: 3.98", "to": "Fresh Start", "value": 3.98}, {"from": "Focus the Mind", "title": "Weight: 3.66", "to": "Kishla Trawlers", "value": 3.66}, {"from": "Focus the Mind", "title": "Weight: 3.02", "to": "Ringing Strike Mastery", "value": 3.02}, {"from": "Focus the Mind", "title": "Weight: 3.63", "to": "Roiling Dragonstorm", "value": 3.63}, {"from": "Focus the Mind", "title": "Weight: 3.17", "to": "Spectral Denial", "value": 3.17}, {"from": "Focus the Mind", "title": "Weight: 3.99", "to": "Narset\u0027s Rebuke", "value": 3.99}, {"from": "Focus the Mind", "title": "Weight: 5.62", "to": "Sunset Strikemaster", "value": 5.62}, {"from": "Focus the Mind", "title": "Weight: 5.36", "to": "Twinmaw Stormbrood", "value": 5.36}, {"from": "Iceridge Serpent", "title": "Weight: 3.77", "to": "Bewildering Blizzard", "value": 3.77}, {"from": "Iceridge Serpent", "title": "Weight: 3.03", "to": "Kishla Trawlers", "value": 3.03}, {"from": "Iceridge Serpent", "title": "Weight: 3.2", "to": "Roiling Dragonstorm", "value": 3.2}, {"from": "Iceridge Serpent", "title": "Weight: 3.63", "to": "Sibsig Appraiser", "value": 3.63}, {"from": "Iceridge Serpent", "title": "Weight: 3.29", "to": "Molten Exhale", "value": 3.29}, {"from": "Iceridge Serpent", "title": "Weight: 3.15", "to": "Narset\u0027s Rebuke", "value": 3.15}, {"from": "Iceridge Serpent", "title": "Weight: 4.61", "to": "Stormshriek Feral", "value": 4.61}, {"from": "Iceridge Serpent", "title": "Weight: 4.76", "to": "Sunset Strikemaster", "value": 4.76}, {"from": "Iceridge Serpent", "title": "Weight: 3.15", "to": "Twinmaw Stormbrood", "value": 3.15}, {"from": "Iceridge Serpent", "title": "Weight: 3.29", "to": "Whirlwing Stormbrood", "value": 3.29}, {"from": "Riverwalk Technique", "title": "Weight: 3.84", "to": "Bewildering Blizzard", "value": 3.84}, {"from": "Riverwalk Technique", "title": "Weight: 4.22", "to": "Fresh Start", "value": 4.22}, {"from": "Riverwalk Technique", "title": "Weight: 5.02", "to": "Kishla Trawlers", "value": 5.02}, {"from": "Riverwalk Technique", "title": "Weight: 4.11", "to": "Roiling Dragonstorm", "value": 4.11}, {"from": "Riverwalk Technique", "title": "Weight: 3.42", "to": "Sibsig Appraiser", "value": 3.42}, {"from": "Riverwalk Technique", "title": "Weight: 3.99", "to": "Spectral Denial", "value": 3.99}, {"from": "Riverwalk Technique", "title": "Weight: 3.47", "to": "Unending Whisper", "value": 3.47}, {"from": "Riverwalk Technique", "title": "Weight: 3.95", "to": "Veteran Ice Climber", "value": 3.95}, {"from": "Riverwalk Technique", "title": "Weight: 3.16", "to": "Wingblade Disciple", "value": 3.16}, {"from": "Riverwalk Technique", "title": "Weight: 4.43", "to": "Breaching Dragonstorm", "value": 4.43}, {"from": "Riverwalk Technique", "title": "Weight: 3.41", "to": "Iridescent Tiger", "value": 3.41}, {"from": "Riverwalk Technique", "title": "Weight: 3.95", "to": "Meticulous Artisan", "value": 3.95}, {"from": "Riverwalk Technique", "title": "Weight: 3.58", "to": "Molten Exhale", "value": 3.58}, {"from": "Riverwalk Technique", "title": "Weight: 6.72", "to": "Twinmaw Stormbrood", "value": 6.72}, {"from": "Riverwalk Technique", "title": "Weight: 3.31", "to": "Whirlwing Stormbrood", "value": 3.31}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.69", "to": "Bewildering Blizzard", "value": 3.69}, {"from": "Roiling Dragonstorm", "title": "Weight: 4.61", "to": "Dispelling Exhale", "value": 4.61}, {"from": "Roiling Dragonstorm", "title": "Weight: 5.16", "to": "Dragonstorm Forecaster", "value": 5.16}, {"from": "Roiling Dragonstorm", "title": "Weight: 4.67", "to": "Fresh Start", "value": 4.67}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.22", "to": "Humbling Elder", "value": 3.22}, {"from": "Roiling Dragonstorm", "title": "Weight: 4.92", "to": "Kishla Trawlers", "value": 4.92}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.47", "to": "Sibsig Appraiser", "value": 3.47}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.09", "to": "Snowmelt Stag", "value": 3.09}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.83", "to": "Temur Devotee", "value": 3.83}, {"from": "Roiling Dragonstorm", "title": "Weight: 4.78", "to": "Wingblade Disciple", "value": 4.78}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.13", "to": "Channeled Dragonfire", "value": 3.13}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.3", "to": "Equilibrium Adept", "value": 3.3}, {"from": "Roiling Dragonstorm", "title": "Weight: 6.0", "to": "Molten Exhale", "value": 6.0}, {"from": "Roiling Dragonstorm", "title": "Weight: 5.62", "to": "Narset\u0027s Rebuke", "value": 5.62}, {"from": "Roiling Dragonstorm", "title": "Weight: 5.33", "to": "Stormshriek Feral", "value": 5.33}, {"from": "Roiling Dragonstorm", "title": "Weight: 3.77", "to": "Sunset Strikemaster", "value": 3.77}, {"from": "Roiling Dragonstorm", "title": "Weight: 7.27", "to": "Runescale Stormbrood", "value": 7.27}, {"from": "Roiling Dragonstorm", "title": "Weight: 6.24", "to": "Twinmaw Stormbrood", "value": 6.24}, {"from": "Roiling Dragonstorm", "title": "Weight: 5.17", "to": "Whirlwing Stormbrood", "value": 5.17}, {"from": "Sibsig Appraiser", "title": "Weight: 3.33", "to": "Bewildering Blizzard", "value": 3.33}, {"from": "Sibsig Appraiser", "title": "Weight: 3.73", "to": "Dispelling Exhale", "value": 3.73}, {"from": "Sibsig Appraiser", "title": "Weight: 4.24", "to": "Fresh Start", "value": 4.24}, {"from": "Sibsig Appraiser", "title": "Weight: 4.44", "to": "Kishla Trawlers", "value": 4.44}, {"from": "Sibsig Appraiser", "title": "Weight: 3.19", "to": "Unending Whisper", "value": 3.19}, {"from": "Sibsig Appraiser", "title": "Weight: 4.05", "to": "Wingblade Disciple", "value": 4.05}, {"from": "Sibsig Appraiser", "title": "Weight: 3.95", "to": "Iridescent Tiger", "value": 3.95}, {"from": "Sibsig Appraiser", "title": "Weight: 3.71", "to": "Meticulous Artisan", "value": 3.71}, {"from": "Sibsig Appraiser", "title": "Weight: 3.61", "to": "Molten Exhale", "value": 3.61}, {"from": "Sibsig Appraiser", "title": "Weight: 4.71", "to": "Narset\u0027s Rebuke", "value": 4.71}, {"from": "Sibsig Appraiser", "title": "Weight: 3.92", "to": "Overwhelming Surge", "value": 3.92}, {"from": "Sibsig Appraiser", "title": "Weight: 4.31", "to": "Sunset Strikemaster", "value": 4.31}, {"from": "Sibsig Appraiser", "title": "Weight: 3.4", "to": "Runescale Stormbrood", "value": 3.4}, {"from": "Sibsig Appraiser", "title": "Weight: 5.14", "to": "Twinmaw Stormbrood", "value": 5.14}, {"from": "Sibsig Appraiser", "title": "Weight: 4.31", "to": "Whirlwing Stormbrood", "value": 4.31}, {"from": "Unending Whisper", "title": "Weight: 4.39", "to": "Fresh Start", "value": 4.39}, {"from": "Unending Whisper", "title": "Weight: 3.39", "to": "Humbling Elder", "value": 3.39}, {"from": "Unending Whisper", "title": "Weight: 3.02", "to": "Kishla Trawlers", "value": 3.02}, {"from": "Unending Whisper", "title": "Weight: 3.47", "to": "Ringing Strike Mastery", "value": 3.47}, {"from": "Unending Whisper", "title": "Weight: 4.13", "to": "Snowmelt Stag", "value": 4.13}, {"from": "Unending Whisper", "title": "Weight: 4.81", "to": "Wingblade Disciple", "value": 4.81}, {"from": "Unending Whisper", "title": "Weight: 3.03", "to": "Channeled Dragonfire", "value": 3.03}, {"from": "Unending Whisper", "title": "Weight: 3.93", "to": "Iridescent Tiger", "value": 3.93}, {"from": "Unending Whisper", "title": "Weight: 4.47", "to": "Molten Exhale", "value": 4.47}, {"from": "Unending Whisper", "title": "Weight: 3.55", "to": "Narset\u0027s Rebuke", "value": 3.55}, {"from": "Unending Whisper", "title": "Weight: 3.21", "to": "Overwhelming Surge", "value": 3.21}, {"from": "Unending Whisper", "title": "Weight: 3.63", "to": "Stormshriek Feral", "value": 3.63}, {"from": "Unending Whisper", "title": "Weight: 4.41", "to": "Sunset Strikemaster", "value": 4.41}, {"from": "Unending Whisper", "title": "Weight: 4.53", "to": "Twin Bolt", "value": 4.53}, {"from": "Unending Whisper", "title": "Weight: 3.04", "to": "Runescale Stormbrood", "value": 3.04}, {"from": "Unending Whisper", "title": "Weight: 4.77", "to": "Twinmaw Stormbrood", "value": 4.77}, {"from": "Equilibrium Adept", "title": "Weight: 4.13", "to": "Ureni\u0027s Rebuff", "value": 4.13}, {"from": "Equilibrium Adept", "title": "Weight: 5.3", "to": "Wingblade Disciple", "value": 5.3}, {"from": "Equilibrium Adept", "title": "Weight: 3.04", "to": "Channeled Dragonfire", "value": 3.04}, {"from": "Equilibrium Adept", "title": "Weight: 3.75", "to": "Molten Exhale", "value": 3.75}, {"from": "Equilibrium Adept", "title": "Weight: 3.12", "to": "Overwhelming Surge", "value": 3.12}, {"from": "Equilibrium Adept", "title": "Weight: 4.4", "to": "Sunset Strikemaster", "value": 4.4}, {"from": "Twinmaw Stormbrood", "title": "Weight: 5.33", "to": "Bewildering Blizzard", "value": 5.33}, {"from": "Twinmaw Stormbrood", "title": "Weight: 4.94", "to": "Dispelling Exhale", "value": 4.94}, {"from": "Twinmaw Stormbrood", "title": "Weight: 4.64", "to": "Kishla Trawlers", "value": 4.64}, {"from": "Twinmaw Stormbrood", "title": "Weight: 4.37", "to": "Wingblade Disciple", "value": 4.37}, {"from": "Twinmaw Stormbrood", "title": "Weight: 3.09", "to": "Jeskai Devotee", "value": 3.09}, {"from": "Twinmaw Stormbrood", "title": "Weight: 4.16", "to": "Molten Exhale", "value": 4.16}, {"from": "Twinmaw Stormbrood", "title": "Weight: 3.34", "to": "Narset\u0027s Rebuke", "value": 3.34}, {"from": "Twinmaw Stormbrood", "title": "Weight: 3.38", "to": "Sunset Strikemaster", "value": 3.38}, {"from": "Twinmaw Stormbrood", "title": "Weight: 4.83", "to": "Twin Bolt", "value": 4.83}, {"from": "Twinmaw Stormbrood", "title": "Weight: 3.38", "to": "Runescale Stormbrood", "value": 3.38}, {"from": "Dispelling Exhale", "title": "Weight: 3.99", "to": "Dragonstorm Forecaster", "value": 3.99}, {"from": "Dispelling Exhale", "title": "Weight: 3.13", "to": "Fresh Start", "value": 3.13}, {"from": "Dispelling Exhale", "title": "Weight: 3.6", "to": "Kishla Trawlers", "value": 3.6}, {"from": "Dispelling Exhale", "title": "Weight: 4.58", "to": "Breaching Dragonstorm", "value": 4.58}, {"from": "Dispelling Exhale", "title": "Weight: 3.43", "to": "Iridescent Tiger", "value": 3.43}, {"from": "Dispelling Exhale", "title": "Weight: 3.9", "to": "Molten Exhale", "value": 3.9}, {"from": "Dispelling Exhale", "title": "Weight: 3.18", "to": "Narset\u0027s Rebuke", "value": 3.18}, {"from": "Dispelling Exhale", "title": "Weight: 3.48", "to": "Stormshriek Feral", "value": 3.48}, {"from": "Dispelling Exhale", "title": "Weight: 3.47", "to": "Twin Bolt", "value": 3.47}, {"from": "Dispelling Exhale", "title": "Weight: 3.64", "to": "Runescale Stormbrood", "value": 3.64}, {"from": "Wingblade Disciple", "title": "Weight: 3.01", "to": "Fresh Start", "value": 3.01}, {"from": "Wingblade Disciple", "title": "Weight: 3.88", "to": "Temur Devotee", "value": 3.88}, {"from": "Wingblade Disciple", "title": "Weight: 4.13", "to": "Ureni\u0027s Rebuff", "value": 4.13}, {"from": "Wingblade Disciple", "title": "Weight: 4.71", "to": "Veteran Ice Climber", "value": 4.71}, {"from": "Wingblade Disciple", "title": "Weight: 3.67", "to": "Channeled Dragonfire", "value": 3.67}, {"from": "Wingblade Disciple", "title": "Weight: 3.78", "to": "Iridescent Tiger", "value": 3.78}, {"from": "Wingblade Disciple", "title": "Weight: 4.33", "to": "Molten Exhale", "value": 4.33}, {"from": "Wingblade Disciple", "title": "Weight: 3.24", "to": "Narset\u0027s Rebuke", "value": 3.24}, {"from": "Wingblade Disciple", "title": "Weight: 3.27", "to": "Stormshriek Feral", "value": 3.27}, {"from": "Wingblade Disciple", "title": "Weight: 5.04", "to": "Sunset Strikemaster", "value": 5.04}, {"from": "Wingblade Disciple", "title": "Weight: 3.93", "to": "Whirlwing Stormbrood", "value": 3.93}, {"from": "Jeskai Devotee", "title": "Weight: 3.96", "to": "Bewildering Blizzard", "value": 3.96}, {"from": "Molten Exhale", "title": "Weight: 3.52", "to": "Bewildering Blizzard", "value": 3.52}, {"from": "Molten Exhale", "title": "Weight: 3.23", "to": "Dragonstorm Forecaster", "value": 3.23}, {"from": "Molten Exhale", "title": "Weight: 3.32", "to": "Highspire Bell-Ringer", "value": 3.32}, {"from": "Molten Exhale", "title": "Weight: 3.86", "to": "Kishla Trawlers", "value": 3.86}, {"from": "Molten Exhale", "title": "Weight: 3.62", "to": "Spectral Denial", "value": 3.62}, {"from": "Molten Exhale", "title": "Weight: 4.05", "to": "Ureni\u0027s Rebuff", "value": 4.05}, {"from": "Molten Exhale", "title": "Weight: 4.59", "to": "Breaching Dragonstorm", "value": 4.59}, {"from": "Molten Exhale", "title": "Weight: 3.65", "to": "Runescale Stormbrood", "value": 3.65}, {"from": "Molten Exhale", "title": "Weight: 4.01", "to": "Whirlwing Stormbrood", "value": 4.01}, {"from": "Sunset Strikemaster", "title": "Weight: 4.14", "to": "Kishla Trawlers", "value": 4.14}, {"from": "Sunset Strikemaster", "title": "Weight: 3.31", "to": "Iridescent Tiger", "value": 3.31}, {"from": "Sunset Strikemaster", "title": "Weight: 3.18", "to": "Narset\u0027s Rebuke", "value": 3.18}, {"from": "Channeled Dragonfire", "title": "Weight: 3.22", "to": "Fresh Start", "value": 3.22}, {"from": "Bewildering Blizzard", "title": "Weight: 3.58", "to": "Fresh Start", "value": 3.58}, {"from": "Bewildering Blizzard", "title": "Weight: 4.19", "to": "Kishla Trawlers", "value": 4.19}, {"from": "Bewildering Blizzard", "title": "Weight: 3.6", "to": "Spectral Denial", "value": 3.6}, {"from": "Bewildering Blizzard", "title": "Weight: 3.6", "to": "Temur Devotee", "value": 3.6}, {"from": "Bewildering Blizzard", "title": "Weight: 4.04", "to": "Veteran Ice Climber", "value": 4.04}, {"from": "Bewildering Blizzard", "title": "Weight: 5.66", "to": "Narset\u0027s Rebuke", "value": 5.66}, {"from": "Bewildering Blizzard", "title": "Weight: 3.65", "to": "Stormshriek Feral", "value": 3.65}, {"from": "Bewildering Blizzard", "title": "Weight: 3.17", "to": "Runescale Stormbrood", "value": 3.17}, {"from": "Bewildering Blizzard", "title": "Weight: 4.04", "to": "Whirlwing Stormbrood", "value": 4.04}, {"from": "Kishla Trawlers", "title": "Weight: 3.67", "to": "Fresh Start", "value": 3.67}, {"from": "Kishla Trawlers", "title": "Weight: 4.25", "to": "Humbling Elder", "value": 4.25}, {"from": "Kishla Trawlers", "title": "Weight: 4.18", "to": "Snowmelt Stag", "value": 4.18}, {"from": "Kishla Trawlers", "title": "Weight: 4.26", "to": "Spectral Denial", "value": 4.26}, {"from": "Kishla Trawlers", "title": "Weight: 5.01", "to": "Narset\u0027s Rebuke", "value": 5.01}, {"from": "Kishla Trawlers", "title": "Weight: 3.16", "to": "Stormshriek Feral", "value": 3.16}, {"from": "Kishla Trawlers", "title": "Weight: 3.49", "to": "Whirlwing Stormbrood", "value": 3.49}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 3.52", "to": "Highspire Bell-Ringer", "value": 3.52}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 3.2", "to": "Humbling Elder", "value": 3.2}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 4.47", "to": "Snowmelt Stag", "value": 4.47}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 3.26", "to": "Spectral Denial", "value": 3.26}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 3.26", "to": "Meticulous Artisan", "value": 3.26}, {"from": "Narset\u0027s Rebuke", "title": "Weight: 3.52", "to": "Whirlwing Stormbrood", "value": 3.52}, {"from": "Stormshriek Feral", "title": "Weight: 3.1", "to": "Ureni\u0027s Rebuff", "value": 3.1}, {"from": "Runescale Stormbrood", "title": "Weight: 3.51", "to": "Fresh Start", "value": 3.51}, {"from": "Runescale Stormbrood", "title": "Weight: 3.29", "to": "Spectral Denial", "value": 3.29}, {"from": "Runescale Stormbrood", "title": "Weight: 3.9", "to": "Overwhelming Surge", "value": 3.9}, {"from": "Runescale Stormbrood", "title": "Weight: 4.92", "to": "Whirlwing Stormbrood", "value": 4.92}, {"from": "Fresh Start", "title": "Weight: 4.38", "to": "Dragonstorm Forecaster", "value": 4.38}, {"from": "Fresh Start", "title": "Weight: 3.96", "to": "Whirlwing Stormbrood", "value": 3.96}, {"from": "Spectral Denial", "title": "Weight: 3.9", "to": "Ureni\u0027s Rebuff", "value": 3.9}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
