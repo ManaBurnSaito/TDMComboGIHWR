@@ -1,0 +1,412 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Fresh Start">Fresh Start</option>
+                                
+                                    <option value="Bewildering Blizzard">Bewildering Blizzard</option>
+                                
+                                    <option value="Iceridge Serpent">Iceridge Serpent</option>
+                                
+                                    <option value="Kishla Trawlers">Kishla Trawlers</option>
+                                
+                                    <option value="Riverwalk Technique">Riverwalk Technique</option>
+                                
+                                    <option value="Roiling Dragonstorm">Roiling Dragonstorm</option>
+                                
+                                    <option value="Sibsig Appraiser">Sibsig Appraiser</option>
+                                
+                                    <option value="Spectral Denial">Spectral Denial</option>
+                                
+                                    <option value="Temur Devotee">Temur Devotee</option>
+                                
+                                    <option value="Veteran Ice Climber">Veteran Ice Climber</option>
+                                
+                                    <option value="Caustic Exhale">Caustic Exhale</option>
+                                
+                                    <option value="Dragon's Prey">Dragon's Prey</option>
+                                
+                                    <option value="Whirlwing Stormbrood">Whirlwing Stormbrood</option>
+                                
+                                    <option value="Dispelling Exhale">Dispelling Exhale</option>
+                                
+                                    <option value="Dirgur Island Dragon">Dirgur Island Dragon</option>
+                                
+                                    <option value="Dragonstorm Forecaster">Dragonstorm Forecaster</option>
+                                
+                                    <option value="Focus the Mind">Focus the Mind</option>
+                                
+                                    <option value="Ringing Strike Mastery">Ringing Strike Mastery</option>
+                                
+                                    <option value="Unending Whisper">Unending Whisper</option>
+                                
+                                    <option value="Wingblade Disciple">Wingblade Disciple</option>
+                                
+                                    <option value="Humbling Elder">Humbling Elder</option>
+                                
+                                    <option value="Snowmelt Stag">Snowmelt Stag</option>
+                                
+                                    <option value="Feral Deathgorger">Feral Deathgorger</option>
+                                
+                                    <option value="Adorned Crocodile">Adorned Crocodile</option>
+                                
+                                    <option value="Salt Road Skirmish">Salt Road Skirmish</option>
+                                
+                                    <option value="Ureni's Rebuff">Ureni's Rebuff</option>
+                                
+                                    <option value="Gurmag Rakshasa">Gurmag Rakshasa</option>
+                                
+                                    <option value="Kin-Tree Nurturer">Kin-Tree Nurturer</option>
+                                
+                                    <option value="Venerated Stormsinger">Venerated Stormsinger</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Fresh Start", "image": "img/Fresh_Start.png", "label": "Fresh Start", "shape": "image", "title": "GIHWR:57.1, avg_pick:5.1", "url": "UB_combo_network_Fresh_Start"}, {"color": "#97c2fc", "id": "Bewildering Blizzard", "image": "img/Bewildering_Blizzard.png", "label": "Bewildering Blizzard", "shape": "image", "title": "GIHWR:56.3, avg_pick:5.96", "url": "UB_combo_network_Bewildering_Blizzard"}, {"color": "#97c2fc", "id": "Iceridge Serpent", "image": "img/Iceridge_Serpent.png", "label": "Iceridge Serpent", "shape": "image", "title": "GIHWR:55.4, avg_pick:10.17", "url": "UB_combo_network_Iceridge_Serpent"}, {"color": "#97c2fc", "id": "Kishla Trawlers", "image": "img/Kishla_Trawlers.png", "label": "Kishla Trawlers", "shape": "image", "title": "GIHWR:56.9, avg_pick:5.2", "url": "UB_combo_network_Kishla_Trawlers"}, {"color": "#97c2fc", "id": "Riverwalk Technique", "image": "img/Riverwalk_Technique.png", "label": "Riverwalk Technique", "shape": "image", "title": "GIHWR:56.3, avg_pick:9.15", "url": "UB_combo_network_Riverwalk_Technique"}, {"color": "#97c2fc", "id": "Roiling Dragonstorm", "image": "img/Roiling_Dragonstorm.png", "label": "Roiling Dragonstorm", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.97", "url": "UB_combo_network_Roiling_Dragonstorm"}, {"color": "#97c2fc", "id": "Sibsig Appraiser", "image": "img/Sibsig_Appraiser.png", "label": "Sibsig Appraiser", "shape": "image", "title": "GIHWR:59.0, avg_pick:4.85", "url": "UB_combo_network_Sibsig_Appraiser"}, {"color": "#97c2fc", "id": "Spectral Denial", "image": "img/Spectral_Denial.png", "label": "Spectral Denial", "shape": "image", "title": "GIHWR:57.1, avg_pick:7.45", "url": "UB_combo_network_Spectral_Denial"}, {"color": "#97c2fc", "id": "Temur Devotee", "image": "img/Temur_Devotee.png", "label": "Temur Devotee", "shape": "image", "title": "GIHWR:54.3, avg_pick:9.47", "url": "UB_combo_network_Temur_Devotee"}, {"color": "#97c2fc", "id": "Veteran Ice Climber", "image": "img/Veteran_Ice_Climber.png", "label": "Veteran Ice Climber", "shape": "image", "title": "GIHWR:53.9, avg_pick:7.5", "url": "UB_combo_network_Veteran_Ice_Climber"}, {"color": "#97c2fc", "id": "Caustic Exhale", "image": "img/Caustic_Exhale.png", "label": "Caustic Exhale", "shape": "image", "title": "GIHWR:56.9, avg_pick:4.17", "url": "UB_combo_network_Caustic_Exhale"}, {"color": "#97c2fc", "id": "Dragon\u0027s Prey", "image": "img/Dragon\u0027s_Prey.png", "label": "Dragon\u0027s Prey", "shape": "image", "title": "GIHWR:55.1, avg_pick:4.25", "url": "UB_combo_network_Dragon\u0027s_Prey"}, {"color": "#97c2fc", "id": "Whirlwing Stormbrood", "image": "img/Whirlwing_Stormbrood.png", "label": "Whirlwing Stormbrood", "shape": "image", "title": "GIHWR:54.9, avg_pick:4.22", "url": "UB_combo_network_Whirlwing_Stormbrood"}, {"color": "#97c2fc", "id": "Dispelling Exhale", "image": "img/Dispelling_Exhale.png", "label": "Dispelling Exhale", "shape": "image", "title": "GIHWR:57.7, avg_pick:6.5", "url": "UB_combo_network_Dispelling_Exhale"}, {"color": "#97c2fc", "id": "Dirgur Island Dragon", "image": "img/Dirgur_Island_Dragon.png", "label": "Dirgur Island Dragon", "shape": "image", "title": "GIHWR:55.4, avg_pick:6.63", "url": "UB_combo_network_Dirgur_Island_Dragon"}, {"color": "#97c2fc", "id": "Dragonstorm Forecaster", "image": "img/Dragonstorm_Forecaster.png", "label": "Dragonstorm Forecaster", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.7", "url": "UB_combo_network_Dragonstorm_Forecaster"}, {"color": "#97c2fc", "id": "Focus the Mind", "image": "img/Focus_the_Mind.png", "label": "Focus the Mind", "shape": "image", "title": "GIHWR:55.2, avg_pick:8.7", "url": "UB_combo_network_Focus_the_Mind"}, {"color": "#97c2fc", "id": "Ringing Strike Mastery", "image": "img/Ringing_Strike_Mastery.png", "label": "Ringing Strike Mastery", "shape": "image", "title": "GIHWR:51.6, avg_pick:11.53", "url": "UB_combo_network_Ringing_Strike_Mastery"}, {"color": "#97c2fc", "id": "Unending Whisper", "image": "img/Unending_Whisper.png", "label": "Unending Whisper", "shape": "image", "title": "GIHWR:56.4, avg_pick:8.89", "url": "UB_combo_network_Unending_Whisper"}, {"color": "#97c2fc", "id": "Wingblade Disciple", "image": "img/Wingblade_Disciple.png", "label": "Wingblade Disciple", "shape": "image", "title": "GIHWR:57.5, avg_pick:4.02", "url": "UB_combo_network_Wingblade_Disciple"}, {"color": "#97c2fc", "id": "Humbling Elder", "image": "img/Humbling_Elder.png", "label": "Humbling Elder", "shape": "image", "title": "GIHWR:54.5, avg_pick:11.44", "url": "UB_combo_network_Humbling_Elder"}, {"color": "#97c2fc", "id": "Snowmelt Stag", "image": "img/Snowmelt_Stag.png", "label": "Snowmelt Stag", "shape": "image", "title": "GIHWR:53.7, avg_pick:11.82", "url": "UB_combo_network_Snowmelt_Stag"}, {"color": "#97c2fc", "id": "Feral Deathgorger", "image": "img/Feral_Deathgorger.png", "label": "Feral Deathgorger", "shape": "image", "title": "GIHWR:53.4, avg_pick:8.08", "url": "UB_combo_network_Feral_Deathgorger"}, {"color": "#97c2fc", "id": "Adorned Crocodile", "image": "img/Adorned_Crocodile.png", "label": "Adorned Crocodile", "shape": "image", "title": "GIHWR:51.9, avg_pick:11.56", "url": "UB_combo_network_Adorned_Crocodile"}, {"color": "#97c2fc", "id": "Salt Road Skirmish", "image": "img/Salt_Road_Skirmish.png", "label": "Salt Road Skirmish", "shape": "image", "title": "GIHWR:54.6, avg_pick:4.64", "url": "UB_combo_network_Salt_Road_Skirmish"}, {"color": "#97c2fc", "id": "Ureni\u0027s Rebuff", "image": "img/Ureni\u0027s_Rebuff.png", "label": "Ureni\u0027s Rebuff", "shape": "image", "title": "GIHWR:56.4, avg_pick:6.15", "url": "UB_combo_network_Ureni\u0027s_Rebuff"}, {"color": "#97c2fc", "id": "Gurmag Rakshasa", "image": "img/Gurmag_Rakshasa.png", "label": "Gurmag Rakshasa", "shape": "image", "title": "GIHWR:55.1, avg_pick:7.65", "url": "UB_combo_network_Gurmag_Rakshasa"}, {"color": "#97c2fc", "id": "Kin-Tree Nurturer", "image": "img/Kin-Tree_Nurturer.png", "label": "Kin-Tree Nurturer", "shape": "image", "title": "GIHWR:54.2, avg_pick:9.82", "url": "UB_combo_network_Kin-Tree_Nurturer"}, {"color": "#97c2fc", "id": "Venerated Stormsinger", "image": "img/Venerated_Stormsinger.png", "label": "Venerated Stormsinger", "shape": "image", "title": "GIHWR:54.9, avg_pick:5.0", "url": "UB_combo_network_Venerated_Stormsinger"}]);
+                  edges = new vis.DataSet([{"from": "Fresh Start", "label": "3.58", "title": "combo_ct:2933, comboWR:60.28, combo+-:3.58, AB_AveWR:56.7", "to": "Bewildering Blizzard", "value": 2933}, {"from": "Fresh Start", "label": "3.01", "title": "combo_ct:5159, comboWR:59.26, combo+-:3.01, AB_AveWR:56.25", "to": "Dirgur Island Dragon", "value": 5159}, {"from": "Fresh Start", "label": "3.03", "title": "combo_ct:7096, comboWR:60.43, combo+-:3.03, AB_AveWR:57.4", "to": "Dispelling Exhale", "value": 7096}, {"from": "Fresh Start", "label": "4.38", "title": "combo_ct:1070, comboWR:60.93, combo+-:4.38, AB_AveWR:56.55", "to": "Dragonstorm Forecaster", "value": 1070}, {"from": "Fresh Start", "label": "3.93", "title": "combo_ct:4872, comboWR:60.08, combo+-:3.93, AB_AveWR:56.15", "to": "Focus the Mind", "value": 4872}, {"from": "Fresh Start", "label": "3.62", "title": "combo_ct:2948, comboWR:60.62, combo+-:3.62, AB_AveWR:57.0", "to": "Kishla Trawlers", "value": 2948}, {"from": "Fresh Start", "label": "4.17", "title": "combo_ct:5236, comboWR:60.87, combo+-:4.17, AB_AveWR:56.7", "to": "Riverwalk Technique", "value": 5236}, {"from": "Fresh Start", "label": "4.62", "title": "combo_ct:3321, comboWR:62.57, combo+-:4.62, AB_AveWR:57.95", "to": "Roiling Dragonstorm", "value": 3321}, {"from": "Fresh Start", "label": "4.19", "title": "combo_ct:8555, comboWR:62.24, combo+-:4.19, AB_AveWR:58.05", "to": "Sibsig Appraiser", "value": 8555}, {"from": "Fresh Start", "label": "4.39", "title": "combo_ct:4537, comboWR:61.14, combo+-:4.39, AB_AveWR:56.75", "to": "Unending Whisper", "value": 4537}, {"from": "Fresh Start", "label": "3.01", "title": "combo_ct:3026, comboWR:60.31, combo+-:3.01, AB_AveWR:57.3", "to": "Wingblade Disciple", "value": 3026}, {"from": "Fresh Start", "label": "3.16", "title": "combo_ct:2061, comboWR:60.16, combo+-:3.16, AB_AveWR:57.0", "to": "Caustic Exhale", "value": 2061}, {"from": "Fresh Start", "label": "4.01", "title": "combo_ct:1813, comboWR:60.01, combo+-:4.01, AB_AveWR:56.0", "to": "Whirlwing Stormbrood", "value": 1813}, {"from": "Bewildering Blizzard", "label": "3.87", "title": "combo_ct:3091, comboWR:59.72, combo+-:3.87, AB_AveWR:55.85", "to": "Iceridge Serpent", "value": 3091}, {"from": "Bewildering Blizzard", "label": "4.24", "title": "combo_ct:2694, comboWR:60.84, combo+-:4.24, AB_AveWR:56.6", "to": "Kishla Trawlers", "value": 2694}, {"from": "Bewildering Blizzard", "label": "3.89", "title": "combo_ct:4775, comboWR:60.19, combo+-:3.89, AB_AveWR:56.3", "to": "Riverwalk Technique", "value": 4775}, {"from": "Bewildering Blizzard", "label": "3.74", "title": "combo_ct:2741, comboWR:61.29, combo+-:3.74, AB_AveWR:57.55", "to": "Roiling Dragonstorm", "value": 2741}, {"from": "Bewildering Blizzard", "label": "3.38", "title": "combo_ct:7336, comboWR:61.03, combo+-:3.38, AB_AveWR:57.65", "to": "Sibsig Appraiser", "value": 7336}, {"from": "Bewildering Blizzard", "label": "3.7", "title": "combo_ct:2048, comboWR:60.4, combo+-:3.7, AB_AveWR:56.7", "to": "Spectral Denial", "value": 2048}, {"from": "Bewildering Blizzard", "label": "3.6", "title": "combo_ct:3513, comboWR:58.9, combo+-:3.6, AB_AveWR:55.3", "to": "Temur Devotee", "value": 3513}, {"from": "Bewildering Blizzard", "label": "4.09", "title": "combo_ct:1083, comboWR:59.19, combo+-:4.09, AB_AveWR:55.1", "to": "Veteran Ice Climber", "value": 1083}, {"from": "Bewildering Blizzard", "label": "3.37", "title": "combo_ct:1861, comboWR:59.97, combo+-:3.37, AB_AveWR:56.6", "to": "Caustic Exhale", "value": 1861}, {"from": "Bewildering Blizzard", "label": "3.24", "title": "combo_ct:1617, comboWR:58.94, combo+-:3.24, AB_AveWR:55.7", "to": "Dragon\u0027s Prey", "value": 1617}, {"from": "Bewildering Blizzard", "label": "4.19", "title": "combo_ct:1634, comboWR:59.79, combo+-:4.19, AB_AveWR:55.6", "to": "Whirlwing Stormbrood", "value": 1634}, {"from": "Iceridge Serpent", "label": "3.08", "title": "combo_ct:3046, comboWR:59.23, combo+-:3.08, AB_AveWR:56.15", "to": "Kishla Trawlers", "value": 3046}, {"from": "Iceridge Serpent", "label": "3.25", "title": "combo_ct:3135, comboWR:60.35, combo+-:3.25, AB_AveWR:57.1", "to": "Roiling Dragonstorm", "value": 3135}, {"from": "Iceridge Serpent", "label": "3.68", "title": "combo_ct:8877, comboWR:60.88, combo+-:3.68, AB_AveWR:57.2", "to": "Sibsig Appraiser", "value": 8877}, {"from": "Iceridge Serpent", "label": "3.02", "title": "combo_ct:5268, comboWR:58.92, combo+-:3.02, AB_AveWR:55.9", "to": "Unending Whisper", "value": 5268}, {"from": "Iceridge Serpent", "label": "3.48", "title": "combo_ct:1844, comboWR:58.73, combo+-:3.48, AB_AveWR:55.25", "to": "Dragon\u0027s Prey", "value": 1844}, {"from": "Iceridge Serpent", "label": "3.44", "title": "combo_ct:1478, comboWR:58.59, combo+-:3.44, AB_AveWR:55.15", "to": "Whirlwing Stormbrood", "value": 1478}, {"from": "Kishla Trawlers", "label": "3.15", "title": "combo_ct:4401, comboWR:59.3, combo+-:3.15, AB_AveWR:56.15", "to": "Dirgur Island Dragon", "value": 4401}, {"from": "Kishla Trawlers", "label": "3.55", "title": "combo_ct:6266, comboWR:60.85, combo+-:3.55, AB_AveWR:57.3", "to": "Dispelling Exhale", "value": 6266}, {"from": "Kishla Trawlers", "label": "3.66", "title": "combo_ct:4463, comboWR:59.71, combo+-:3.66, AB_AveWR:56.05", "to": "Focus the Mind", "value": 4463}, {"from": "Kishla Trawlers", "label": "4.25", "title": "combo_ct:1331, comboWR:59.95, combo+-:4.25, AB_AveWR:55.7", "to": "Humbling Elder", "value": 1331}, {"from": "Kishla Trawlers", "label": "5.02", "title": "combo_ct:4864, comboWR:61.62, combo+-:5.02, AB_AveWR:56.6", "to": "Riverwalk Technique", "value": 4864}, {"from": "Kishla Trawlers", "label": "4.92", "title": "combo_ct:2796, comboWR:62.77, combo+-:4.92, AB_AveWR:57.85", "to": "Roiling Dragonstorm", "value": 2796}, {"from": "Kishla Trawlers", "label": "4.44", "title": "combo_ct:7447, comboWR:62.39, combo+-:4.44, AB_AveWR:57.95", "to": "Sibsig Appraiser", "value": 7447}, {"from": "Kishla Trawlers", "label": "4.13", "title": "combo_ct:1045, comboWR:59.43, combo+-:4.13, AB_AveWR:55.3", "to": "Snowmelt Stag", "value": 1045}, {"from": "Kishla Trawlers", "label": "4.31", "title": "combo_ct:2130, comboWR:61.31, combo+-:4.31, AB_AveWR:57.0", "to": "Spectral Denial", "value": 2130}, {"from": "Kishla Trawlers", "label": "3.07", "title": "combo_ct:4362, comboWR:59.72, combo+-:3.07, AB_AveWR:56.65", "to": "Unending Whisper", "value": 4362}, {"from": "Kishla Trawlers", "label": "5.24", "title": "combo_ct:2084, comboWR:62.14, combo+-:5.24, AB_AveWR:56.9", "to": "Caustic Exhale", "value": 2084}, {"from": "Kishla Trawlers", "label": "4.69", "title": "combo_ct:1829, comboWR:60.69, combo+-:4.69, AB_AveWR:56.0", "to": "Dragon\u0027s Prey", "value": 1829}, {"from": "Kishla Trawlers", "label": "3.59", "title": "combo_ct:1560, comboWR:59.49, combo+-:3.59, AB_AveWR:55.9", "to": "Whirlwing Stormbrood", "value": 1560}, {"from": "Riverwalk Technique", "label": "4.11", "title": "combo_ct:5658, comboWR:61.66, combo+-:4.11, AB_AveWR:57.55", "to": "Roiling Dragonstorm", "value": 5658}, {"from": "Riverwalk Technique", "label": "3.42", "title": "combo_ct:14353, comboWR:61.07, combo+-:3.42, AB_AveWR:57.65", "to": "Sibsig Appraiser", "value": 14353}, {"from": "Riverwalk Technique", "label": "4.04", "title": "combo_ct:4121, comboWR:60.74, combo+-:4.04, AB_AveWR:56.7", "to": "Spectral Denial", "value": 4121}, {"from": "Riverwalk Technique", "label": "3.52", "title": "combo_ct:7916, comboWR:59.87, combo+-:3.52, AB_AveWR:56.35", "to": "Unending Whisper", "value": 7916}, {"from": "Riverwalk Technique", "label": "3.95", "title": "combo_ct:2161, comboWR:59.05, combo+-:3.95, AB_AveWR:55.1", "to": "Veteran Ice Climber", "value": 2161}, {"from": "Riverwalk Technique", "label": "3.21", "title": "combo_ct:4665, comboWR:60.11, combo+-:3.21, AB_AveWR:56.9", "to": "Wingblade Disciple", "value": 4665}, {"from": "Riverwalk Technique", "label": "4.35", "title": "combo_ct:3490, comboWR:60.95, combo+-:4.35, AB_AveWR:56.6", "to": "Caustic Exhale", "value": 3490}, {"from": "Riverwalk Technique", "label": "4.42", "title": "combo_ct:1348, comboWR:59.27, combo+-:4.42, AB_AveWR:54.85", "to": "Feral Deathgorger", "value": 1348}, {"from": "Riverwalk Technique", "label": "3.41", "title": "combo_ct:2776, comboWR:59.01, combo+-:3.41, AB_AveWR:55.6", "to": "Whirlwing Stormbrood", "value": 2776}, {"from": "Roiling Dragonstorm", "label": "5.22", "title": "combo_ct:6192, comboWR:62.32, combo+-:5.22, AB_AveWR:57.1", "to": "Dirgur Island Dragon", "value": 6192}, {"from": "Roiling Dragonstorm", "label": "4.56", "title": "combo_ct:7676, comboWR:62.81, combo+-:4.56, AB_AveWR:58.25", "to": "Dispelling Exhale", "value": 7676}, {"from": "Roiling Dragonstorm", "label": "5.21", "title": "combo_ct:1530, comboWR:62.61, combo+-:5.21, AB_AveWR:57.4", "to": "Dragonstorm Forecaster", "value": 1530}, {"from": "Roiling Dragonstorm", "label": "3.63", "title": "combo_ct:4432, comboWR:60.63, combo+-:3.63, AB_AveWR:57.0", "to": "Focus the Mind", "value": 4432}, {"from": "Roiling Dragonstorm", "label": "3.22", "title": "combo_ct:1261, comboWR:59.87, combo+-:3.22, AB_AveWR:56.65", "to": "Humbling Elder", "value": 1261}, {"from": "Roiling Dragonstorm", "label": "3.47", "title": "combo_ct:8528, comboWR:62.37, combo+-:3.47, AB_AveWR:58.9", "to": "Sibsig Appraiser", "value": 8528}, {"from": "Roiling Dragonstorm", "label": "3.04", "title": "combo_ct:1076, comboWR:59.29, combo+-:3.04, AB_AveWR:56.25", "to": "Snowmelt Stag", "value": 1076}, {"from": "Roiling Dragonstorm", "label": "3.78", "title": "combo_ct:4280, comboWR:60.33, combo+-:3.78, AB_AveWR:56.55", "to": "Temur Devotee", "value": 4280}, {"from": "Roiling Dragonstorm", "label": "4.83", "title": "combo_ct:2769, comboWR:62.98, combo+-:4.83, AB_AveWR:58.15", "to": "Wingblade Disciple", "value": 2769}, {"from": "Roiling Dragonstorm", "label": "4.84", "title": "combo_ct:2597, comboWR:62.69, combo+-:4.84, AB_AveWR:57.85", "to": "Caustic Exhale", "value": 2597}, {"from": "Roiling Dragonstorm", "label": "7.01", "title": "combo_ct:2103, comboWR:63.96, combo+-:7.01, AB_AveWR:56.95", "to": "Dragon\u0027s Prey", "value": 2103}, {"from": "Roiling Dragonstorm", "label": "3.19", "title": "combo_ct:1373, comboWR:59.29, combo+-:3.19, AB_AveWR:56.1", "to": "Feral Deathgorger", "value": 1373}, {"from": "Roiling Dragonstorm", "label": "5.27", "title": "combo_ct:2252, comboWR:62.12, combo+-:5.27, AB_AveWR:56.85", "to": "Whirlwing Stormbrood", "value": 2252}, {"from": "Sibsig Appraiser", "label": "3.5", "title": "combo_ct:13059, comboWR:60.7, combo+-:3.5, AB_AveWR:57.2", "to": "Dirgur Island Dragon", "value": 13059}, {"from": "Sibsig Appraiser", "label": "3.68", "title": "combo_ct:19040, comboWR:62.03, combo+-:3.68, AB_AveWR:58.35", "to": "Dispelling Exhale", "value": 19040}, {"from": "Sibsig Appraiser", "label": "3.24", "title": "combo_ct:11923, comboWR:60.94, combo+-:3.24, AB_AveWR:57.7", "to": "Unending Whisper", "value": 11923}, {"from": "Sibsig Appraiser", "label": "4.1", "title": "combo_ct:7058, comboWR:62.35, combo+-:4.1, AB_AveWR:58.25", "to": "Wingblade Disciple", "value": 7058}, {"from": "Sibsig Appraiser", "label": "4.37", "title": "combo_ct:1028, comboWR:59.82, combo+-:4.37, AB_AveWR:55.45", "to": "Adorned Crocodile", "value": 1028}, {"from": "Sibsig Appraiser", "label": "3.94", "title": "combo_ct:6474, comboWR:61.89, combo+-:3.94, AB_AveWR:57.95", "to": "Caustic Exhale", "value": 6474}, {"from": "Sibsig Appraiser", "label": "4.46", "title": "combo_ct:5264, comboWR:61.51, combo+-:4.46, AB_AveWR:57.05", "to": "Dragon\u0027s Prey", "value": 5264}, {"from": "Sibsig Appraiser", "label": "3.82", "title": "combo_ct:1168, comboWR:60.62, combo+-:3.82, AB_AveWR:56.8", "to": "Salt Road Skirmish", "value": 1168}, {"from": "Sibsig Appraiser", "label": "4.41", "title": "combo_ct:4472, comboWR:61.36, combo+-:4.41, AB_AveWR:56.95", "to": "Whirlwing Stormbrood", "value": 4472}, {"from": "Spectral Denial", "label": "3.22", "title": "combo_ct:3569, comboWR:59.37, combo+-:3.22, AB_AveWR:56.15", "to": "Focus the Mind", "value": 3569}, {"from": "Spectral Denial", "label": "4.0", "title": "combo_ct:1814, comboWR:60.75, combo+-:4.0, AB_AveWR:56.75", "to": "Ureni\u0027s Rebuff", "value": 1814}, {"from": "Spectral Denial", "label": "3.28", "title": "combo_ct:1342, comboWR:60.28, combo+-:3.28, AB_AveWR:57.0", "to": "Caustic Exhale", "value": 1342}, {"from": "Spectral Denial", "label": "4.09", "title": "combo_ct:1080, comboWR:60.19, combo+-:4.09, AB_AveWR:56.1", "to": "Dragon\u0027s Prey", "value": 1080}, {"from": "Temur Devotee", "label": "3.88", "title": "combo_ct:2899, comboWR:59.78, combo+-:3.88, AB_AveWR:55.9", "to": "Wingblade Disciple", "value": 2899}, {"from": "Veteran Ice Climber", "label": "4.76", "title": "combo_ct:1295, comboWR:60.46, combo+-:4.76, AB_AveWR:55.7", "to": "Wingblade Disciple", "value": 1295}, {"from": "Veteran Ice Climber", "label": "3.12", "title": "combo_ct:1003, comboWR:58.52, combo+-:3.12, AB_AveWR:55.4", "to": "Caustic Exhale", "value": 1003}, {"from": "Caustic Exhale", "label": "5.27", "title": "combo_ct:1186, comboWR:61.72, combo+-:5.27, AB_AveWR:56.45", "to": "Dragonstorm Forecaster", "value": 1186}, {"from": "Caustic Exhale", "label": "3.1", "title": "combo_ct:2715, comboWR:59.15, combo+-:3.1, AB_AveWR:56.05", "to": "Focus the Mind", "value": 2715}, {"from": "Caustic Exhale", "label": "3.08", "title": "combo_ct:1455, comboWR:59.73, combo+-:3.08, AB_AveWR:56.65", "to": "Ureni\u0027s Rebuff", "value": 1455}, {"from": "Caustic Exhale", "label": "3.75", "title": "combo_ct:1278, comboWR:60.95, combo+-:3.75, AB_AveWR:57.2", "to": "Wingblade Disciple", "value": 1278}, {"from": "Dragon\u0027s Prey", "label": "4.27", "title": "combo_ct:3842, comboWR:60.67, combo+-:4.27, AB_AveWR:56.4", "to": "Dispelling Exhale", "value": 3842}, {"from": "Dragon\u0027s Prey", "label": "3.09", "title": "combo_ct:1924, comboWR:58.84, combo+-:3.09, AB_AveWR:55.75", "to": "Unending Whisper", "value": 1924}, {"from": "Dragon\u0027s Prey", "label": "4.08", "title": "combo_ct:1629, comboWR:57.58, combo+-:4.08, AB_AveWR:53.5", "to": "Adorned Crocodile", "value": 1629}, {"from": "Dragon\u0027s Prey", "label": "3.61", "title": "combo_ct:1918, comboWR:58.71, combo+-:3.61, AB_AveWR:55.1", "to": "Gurmag Rakshasa", "value": 1918}, {"from": "Whirlwing Stormbrood", "label": "4.08", "title": "combo_ct:1196, comboWR:60.28, combo+-:4.08, AB_AveWR:56.2", "to": "Wingblade Disciple", "value": 1196}, {"from": "Dispelling Exhale", "label": "3.01", "title": "combo_ct:12254, comboWR:59.56, combo+-:3.01, AB_AveWR:56.55", "to": "Dirgur Island Dragon", "value": 12254}, {"from": "Dispelling Exhale", "label": "3.99", "title": "combo_ct:2947, comboWR:60.84, combo+-:3.99, AB_AveWR:56.85", "to": "Dragonstorm Forecaster", "value": 2947}, {"from": "Dirgur Island Dragon", "label": "3.9", "title": "combo_ct:2176, comboWR:59.6, combo+-:3.9, AB_AveWR:55.7", "to": "Dragonstorm Forecaster", "value": 2176}, {"from": "Focus the Mind", "label": "3.02", "title": "combo_ct:1526, comboWR:56.42, combo+-:3.02, AB_AveWR:53.4", "to": "Ringing Strike Mastery", "value": 1526}, {"from": "Ringing Strike Mastery", "label": "3.52", "title": "combo_ct:1309, comboWR:57.52, combo+-:3.52, AB_AveWR:54.0", "to": "Unending Whisper", "value": 1309}, {"from": "Unending Whisper", "label": "3.44", "title": "combo_ct:2503, comboWR:58.89, combo+-:3.44, AB_AveWR:55.45", "to": "Humbling Elder", "value": 2503}, {"from": "Unending Whisper", "label": "4.13", "title": "combo_ct:1999, comboWR:59.18, combo+-:4.13, AB_AveWR:55.05", "to": "Snowmelt Stag", "value": 1999}, {"from": "Unending Whisper", "label": "4.91", "title": "combo_ct:5380, comboWR:61.86, combo+-:4.91, AB_AveWR:56.95", "to": "Wingblade Disciple", "value": 5380}, {"from": "Wingblade Disciple", "label": "4.23", "title": "combo_ct:2429, comboWR:61.18, combo+-:4.23, AB_AveWR:56.95", "to": "Ureni\u0027s Rebuff", "value": 2429}, {"from": "Salt Road Skirmish", "label": "4.43", "title": "combo_ct:1297, comboWR:58.83, combo+-:4.43, AB_AveWR:54.4", "to": "Kin-Tree Nurturer", "value": 1297}, {"from": "Gurmag Rakshasa", "label": "3.12", "title": "combo_ct:1146, comboWR:57.77, combo+-:3.12, AB_AveWR:54.65", "to": "Kin-Tree Nurturer", "value": 1146}, {"from": "Kin-Tree Nurturer", "label": "3.16", "title": "combo_ct:1206, comboWR:57.71, combo+-:3.16, AB_AveWR:54.55", "to": "Venerated Stormsinger", "value": 1206}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

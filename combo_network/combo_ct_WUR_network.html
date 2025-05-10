@@ -1,0 +1,466 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Dalkovan Packbeasts">Dalkovan Packbeasts</option>
+                                
+                                    <option value="Duty Beyond Death">Duty Beyond Death</option>
+                                
+                                    <option value="Rally the Monastery">Rally the Monastery</option>
+                                
+                                    <option value="Static Snare">Static Snare</option>
+                                
+                                    <option value="Shocking Sharpshooter">Shocking Sharpshooter</option>
+                                
+                                    <option value="War Effort">War Effort</option>
+                                
+                                    <option value="Stormplain Detainment">Stormplain Detainment</option>
+                                
+                                    <option value="Descendant of Storms">Descendant of Storms</option>
+                                
+                                    <option value="Fortress Kin-Guard">Fortress Kin-Guard</option>
+                                
+                                    <option value="Mardu Devotee">Mardu Devotee</option>
+                                
+                                    <option value="Salt Road Packbeast">Salt Road Packbeast</option>
+                                
+                                    <option value="Underfoot Underdogs">Underfoot Underdogs</option>
+                                
+                                    <option value="Sunpearl Kirin">Sunpearl Kirin</option>
+                                
+                                    <option value="Equilibrium Adept">Equilibrium Adept</option>
+                                
+                                    <option value="Jeskai Shrinekeeper">Jeskai Shrinekeeper</option>
+                                
+                                    <option value="Teeming Dragonstorm">Teeming Dragonstorm</option>
+                                
+                                    <option value="Osseous Exhale">Osseous Exhale</option>
+                                
+                                    <option value="Dirgur Island Dragon">Dirgur Island Dragon</option>
+                                
+                                    <option value="Focus the Mind">Focus the Mind</option>
+                                
+                                    <option value="Iceridge Serpent">Iceridge Serpent</option>
+                                
+                                    <option value="Riverwalk Technique">Riverwalk Technique</option>
+                                
+                                    <option value="Roiling Dragonstorm">Roiling Dragonstorm</option>
+                                
+                                    <option value="Sibsig Appraiser">Sibsig Appraiser</option>
+                                
+                                    <option value="Unending Whisper">Unending Whisper</option>
+                                
+                                    <option value="Twinmaw Stormbrood">Twinmaw Stormbrood</option>
+                                
+                                    <option value="Dispelling Exhale">Dispelling Exhale</option>
+                                
+                                    <option value="Wingblade Disciple">Wingblade Disciple</option>
+                                
+                                    <option value="Jeskai Devotee">Jeskai Devotee</option>
+                                
+                                    <option value="Molten Exhale">Molten Exhale</option>
+                                
+                                    <option value="Sunset Strikemaster">Sunset Strikemaster</option>
+                                
+                                    <option value="Monastery Messenger">Monastery Messenger</option>
+                                
+                                    <option value="Channeled Dragonfire">Channeled Dragonfire</option>
+                                
+                                    <option value="Fleeting Effigy">Fleeting Effigy</option>
+                                
+                                    <option value="Bewildering Blizzard">Bewildering Blizzard</option>
+                                
+                                    <option value="Kishla Trawlers">Kishla Trawlers</option>
+                                
+                                    <option value="Riverwheel Sweep">Riverwheel Sweep</option>
+                                
+                                    <option value="Temur Devotee">Temur Devotee</option>
+                                
+                                    <option value="Narset's Rebuke">Narset's Rebuke</option>
+                                
+                                    <option value="Stormshriek Feral">Stormshriek Feral</option>
+                                
+                                    <option value="Runescale Stormbrood">Runescale Stormbrood</option>
+                                
+                                    <option value="Fresh Start">Fresh Start</option>
+                                
+                                    <option value="Spectral Denial">Spectral Denial</option>
+                                
+                                    <option value="Veteran Ice Climber">Veteran Ice Climber</option>
+                                
+                                    <option value="Whirlwing Stormbrood">Whirlwing Stormbrood</option>
+                                
+                                    <option value="Dragonstorm Forecaster">Dragonstorm Forecaster</option>
+                                
+                                    <option value="Breaching Dragonstorm">Breaching Dragonstorm</option>
+                                
+                                    <option value="Iridescent Tiger">Iridescent Tiger</option>
+                                
+                                    <option value="Twin Bolt">Twin Bolt</option>
+                                
+                                    <option value="Ringing Strike Mastery">Ringing Strike Mastery</option>
+                                
+                                    <option value="Highspire Bell-Ringer">Highspire Bell-Ringer</option>
+                                
+                                    <option value="Humbling Elder">Humbling Elder</option>
+                                
+                                    <option value="Snowmelt Stag">Snowmelt Stag</option>
+                                
+                                    <option value="Meticulous Artisan">Meticulous Artisan</option>
+                                
+                                    <option value="Overwhelming Surge">Overwhelming Surge</option>
+                                
+                                    <option value="Ureni's Rebuff">Ureni's Rebuff</option>
+                                
+                                    <option value="Rescue Leopard">Rescue Leopard</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Dalkovan Packbeasts", "image": "img/Dalkovan_Packbeasts.png", "label": "Dalkovan Packbeasts", "shape": "image", "title": "GIHWR:56.7, avg_pick:3.79", "url": "WUR_combo_network_Dalkovan_Packbeasts"}, {"color": "#97c2fc", "id": "Duty Beyond Death", "image": "img/Duty_Beyond_Death.png", "label": "Duty Beyond Death", "shape": "image", "title": "GIHWR:55.6, avg_pick:5.94", "url": "WUR_combo_network_Duty_Beyond_Death"}, {"color": "#97c2fc", "id": "Rally the Monastery", "image": "img/Rally_the_Monastery.png", "label": "Rally the Monastery", "shape": "image", "title": "GIHWR:59.0, avg_pick:3.53", "url": "WUR_combo_network_Rally_the_Monastery"}, {"color": "#97c2fc", "id": "Static Snare", "image": "img/Static_Snare.png", "label": "Static Snare", "shape": "image", "title": "GIHWR:56.2, avg_pick:3.0", "url": "WUR_combo_network_Static_Snare"}, {"color": "#97c2fc", "id": "Shocking Sharpshooter", "image": "img/Shocking_Sharpshooter.png", "label": "Shocking Sharpshooter", "shape": "image", "title": "GIHWR:57.5, avg_pick:3.86", "url": "WUR_combo_network_Shocking_Sharpshooter"}, {"color": "#97c2fc", "id": "War Effort", "image": "img/War_Effort.png", "label": "War Effort", "shape": "image", "title": "GIHWR:56.1, avg_pick:5.05", "url": "WUR_combo_network_War_Effort"}, {"color": "#97c2fc", "id": "Stormplain Detainment", "image": "img/Stormplain_Detainment.png", "label": "Stormplain Detainment", "shape": "image", "title": "GIHWR:55.2, avg_pick:4.38", "url": "WUR_combo_network_Stormplain_Detainment"}, {"color": "#97c2fc", "id": "Descendant of Storms", "image": "img/Descendant_of_Storms.png", "label": "Descendant of Storms", "shape": "image", "title": "GIHWR:58.0, avg_pick:4.04", "url": "WUR_combo_network_Descendant_of_Storms"}, {"color": "#97c2fc", "id": "Fortress Kin-Guard", "image": "img/Fortress_Kin-Guard.png", "label": "Fortress Kin-Guard", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.86", "url": "WUR_combo_network_Fortress_Kin-Guard"}, {"color": "#97c2fc", "id": "Mardu Devotee", "image": "img/Mardu_Devotee.png", "label": "Mardu Devotee", "shape": "image", "title": "GIHWR:58.1, avg_pick:6.57", "url": "WUR_combo_network_Mardu_Devotee"}, {"color": "#97c2fc", "id": "Salt Road Packbeast", "image": "img/Salt_Road_Packbeast.png", "label": "Salt Road Packbeast", "shape": "image", "title": "GIHWR:57.8, avg_pick:5.4", "url": "WUR_combo_network_Salt_Road_Packbeast"}, {"color": "#97c2fc", "id": "Underfoot Underdogs", "image": "img/Underfoot_Underdogs.png", "label": "Underfoot Underdogs", "shape": "image", "title": "GIHWR:53.4, avg_pick:10.37", "url": "WUR_combo_network_Underfoot_Underdogs"}, {"color": "#97c2fc", "id": "Sunpearl Kirin", "image": "img/Sunpearl_Kirin.png", "label": "Sunpearl Kirin", "shape": "image", "title": "GIHWR:56.7, avg_pick:3.95", "url": "WUR_combo_network_Sunpearl_Kirin"}, {"color": "#97c2fc", "id": "Equilibrium Adept", "image": "img/Equilibrium_Adept.png", "label": "Equilibrium Adept", "shape": "image", "title": "GIHWR:56.2, avg_pick:5.86", "url": "WUR_combo_network_Equilibrium_Adept"}, {"color": "#97c2fc", "id": "Jeskai Shrinekeeper", "image": "img/Jeskai_Shrinekeeper.png", "label": "Jeskai Shrinekeeper", "shape": "image", "title": "GIHWR:57.8, avg_pick:4.16", "url": "WUR_combo_network_Jeskai_Shrinekeeper"}, {"color": "#97c2fc", "id": "Teeming Dragonstorm", "image": "img/Teeming_Dragonstorm.png", "label": "Teeming Dragonstorm", "shape": "image", "title": "GIHWR:56.5, avg_pick:3.36", "url": "WUR_combo_network_Teeming_Dragonstorm"}, {"color": "#97c2fc", "id": "Osseous Exhale", "image": "img/Osseous_Exhale.png", "label": "Osseous Exhale", "shape": "image", "title": "GIHWR:54.7, avg_pick:6.01", "url": "WUR_combo_network_Osseous_Exhale"}, {"color": "#97c2fc", "id": "Dirgur Island Dragon", "image": "img/Dirgur_Island_Dragon.png", "label": "Dirgur Island Dragon", "shape": "image", "title": "GIHWR:55.4, avg_pick:6.63", "url": "WUR_combo_network_Dirgur_Island_Dragon"}, {"color": "#97c2fc", "id": "Focus the Mind", "image": "img/Focus_the_Mind.png", "label": "Focus the Mind", "shape": "image", "title": "GIHWR:55.2, avg_pick:8.7", "url": "WUR_combo_network_Focus_the_Mind"}, {"color": "#97c2fc", "id": "Iceridge Serpent", "image": "img/Iceridge_Serpent.png", "label": "Iceridge Serpent", "shape": "image", "title": "GIHWR:55.4, avg_pick:10.17", "url": "WUR_combo_network_Iceridge_Serpent"}, {"color": "#97c2fc", "id": "Riverwalk Technique", "image": "img/Riverwalk_Technique.png", "label": "Riverwalk Technique", "shape": "image", "title": "GIHWR:56.3, avg_pick:9.15", "url": "WUR_combo_network_Riverwalk_Technique"}, {"color": "#97c2fc", "id": "Roiling Dragonstorm", "image": "img/Roiling_Dragonstorm.png", "label": "Roiling Dragonstorm", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.97", "url": "WUR_combo_network_Roiling_Dragonstorm"}, {"color": "#97c2fc", "id": "Sibsig Appraiser", "image": "img/Sibsig_Appraiser.png", "label": "Sibsig Appraiser", "shape": "image", "title": "GIHWR:59.0, avg_pick:4.85", "url": "WUR_combo_network_Sibsig_Appraiser"}, {"color": "#97c2fc", "id": "Unending Whisper", "image": "img/Unending_Whisper.png", "label": "Unending Whisper", "shape": "image", "title": "GIHWR:56.4, avg_pick:8.89", "url": "WUR_combo_network_Unending_Whisper"}, {"color": "#97c2fc", "id": "Twinmaw Stormbrood", "image": "img/Twinmaw_Stormbrood.png", "label": "Twinmaw Stormbrood", "shape": "image", "title": "GIHWR:58.9, avg_pick:2.15", "url": "WUR_combo_network_Twinmaw_Stormbrood"}, {"color": "#97c2fc", "id": "Dispelling Exhale", "image": "img/Dispelling_Exhale.png", "label": "Dispelling Exhale", "shape": "image", "title": "GIHWR:57.7, avg_pick:6.5", "url": "WUR_combo_network_Dispelling_Exhale"}, {"color": "#97c2fc", "id": "Wingblade Disciple", "image": "img/Wingblade_Disciple.png", "label": "Wingblade Disciple", "shape": "image", "title": "GIHWR:57.5, avg_pick:4.02", "url": "WUR_combo_network_Wingblade_Disciple"}, {"color": "#97c2fc", "id": "Jeskai Devotee", "image": "img/Jeskai_Devotee.png", "label": "Jeskai Devotee", "shape": "image", "title": "GIHWR:54.1, avg_pick:8.93", "url": "WUR_combo_network_Jeskai_Devotee"}, {"color": "#97c2fc", "id": "Molten Exhale", "image": "img/Molten_Exhale.png", "label": "Molten Exhale", "shape": "image", "title": "GIHWR:57.3, avg_pick:3.44", "url": "WUR_combo_network_Molten_Exhale"}, {"color": "#97c2fc", "id": "Sunset Strikemaster", "image": "img/Sunset_Strikemaster.png", "label": "Sunset Strikemaster", "shape": "image", "title": "GIHWR:57.4, avg_pick:3.8", "url": "WUR_combo_network_Sunset_Strikemaster"}, {"color": "#97c2fc", "id": "Monastery Messenger", "image": "img/Monastery_Messenger.png", "label": "Monastery Messenger", "shape": "image", "title": "GIHWR:52.7, avg_pick:10.42", "url": "WUR_combo_network_Monastery_Messenger"}, {"color": "#97c2fc", "id": "Channeled Dragonfire", "image": "img/Channeled_Dragonfire.png", "label": "Channeled Dragonfire", "shape": "image", "title": "GIHWR:56.8, avg_pick:5.02", "url": "WUR_combo_network_Channeled_Dragonfire"}, {"color": "#97c2fc", "id": "Fleeting Effigy", "image": "img/Fleeting_Effigy.png", "label": "Fleeting Effigy", "shape": "image", "title": "GIHWR:54.8, avg_pick:7.59", "url": "WUR_combo_network_Fleeting_Effigy"}, {"color": "#97c2fc", "id": "Bewildering Blizzard", "image": "img/Bewildering_Blizzard.png", "label": "Bewildering Blizzard", "shape": "image", "title": "GIHWR:56.3, avg_pick:5.96", "url": "WUR_combo_network_Bewildering_Blizzard"}, {"color": "#97c2fc", "id": "Kishla Trawlers", "image": "img/Kishla_Trawlers.png", "label": "Kishla Trawlers", "shape": "image", "title": "GIHWR:56.9, avg_pick:5.2", "url": "WUR_combo_network_Kishla_Trawlers"}, {"color": "#97c2fc", "id": "Riverwheel Sweep", "image": "img/Riverwheel_Sweep.png", "label": "Riverwheel Sweep", "shape": "image", "title": "GIHWR:57.6, avg_pick:6.86", "url": "WUR_combo_network_Riverwheel_Sweep"}, {"color": "#97c2fc", "id": "Temur Devotee", "image": "img/Temur_Devotee.png", "label": "Temur Devotee", "shape": "image", "title": "GIHWR:54.3, avg_pick:9.47", "url": "WUR_combo_network_Temur_Devotee"}, {"color": "#97c2fc", "id": "Narset\u0027s Rebuke", "image": "img/Narset\u0027s_Rebuke.png", "label": "Narset\u0027s Rebuke", "shape": "image", "title": "GIHWR:55.4, avg_pick:8.12", "url": "WUR_combo_network_Narset\u0027s_Rebuke"}, {"color": "#97c2fc", "id": "Stormshriek Feral", "image": "img/Stormshriek_Feral.png", "label": "Stormshriek Feral", "shape": "image", "title": "GIHWR:54.3, avg_pick:7.47", "url": "WUR_combo_network_Stormshriek_Feral"}, {"color": "#97c2fc", "id": "Runescale Stormbrood", "image": "img/Runescale_Stormbrood.png", "label": "Runescale Stormbrood", "shape": "image", "title": "GIHWR:55.4, avg_pick:4.72", "url": "WUR_combo_network_Runescale_Stormbrood"}, {"color": "#97c2fc", "id": "Fresh Start", "image": "img/Fresh_Start.png", "label": "Fresh Start", "shape": "image", "title": "GIHWR:57.1, avg_pick:5.1", "url": "WUR_combo_network_Fresh_Start"}, {"color": "#97c2fc", "id": "Spectral Denial", "image": "img/Spectral_Denial.png", "label": "Spectral Denial", "shape": "image", "title": "GIHWR:57.1, avg_pick:7.45", "url": "WUR_combo_network_Spectral_Denial"}, {"color": "#97c2fc", "id": "Veteran Ice Climber", "image": "img/Veteran_Ice_Climber.png", "label": "Veteran Ice Climber", "shape": "image", "title": "GIHWR:53.9, avg_pick:7.5", "url": "WUR_combo_network_Veteran_Ice_Climber"}, {"color": "#97c2fc", "id": "Whirlwing Stormbrood", "image": "img/Whirlwing_Stormbrood.png", "label": "Whirlwing Stormbrood", "shape": "image", "title": "GIHWR:54.9, avg_pick:4.22", "url": "WUR_combo_network_Whirlwing_Stormbrood"}, {"color": "#97c2fc", "id": "Dragonstorm Forecaster", "image": "img/Dragonstorm_Forecaster.png", "label": "Dragonstorm Forecaster", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.7", "url": "WUR_combo_network_Dragonstorm_Forecaster"}, {"color": "#97c2fc", "id": "Breaching Dragonstorm", "image": "img/Breaching_Dragonstorm.png", "label": "Breaching Dragonstorm", "shape": "image", "title": "GIHWR:51.6, avg_pick:7.45", "url": "WUR_combo_network_Breaching_Dragonstorm"}, {"color": "#97c2fc", "id": "Iridescent Tiger", "image": "img/Iridescent_Tiger.png", "label": "Iridescent Tiger", "shape": "image", "title": "GIHWR:55.8, avg_pick:8.29", "url": "WUR_combo_network_Iridescent_Tiger"}, {"color": "#97c2fc", "id": "Twin Bolt", "image": "img/Twin_Bolt.png", "label": "Twin Bolt", "shape": "image", "title": "GIHWR:52.8, avg_pick:10.28", "url": "WUR_combo_network_Twin_Bolt"}, {"color": "#97c2fc", "id": "Ringing Strike Mastery", "image": "img/Ringing_Strike_Mastery.png", "label": "Ringing Strike Mastery", "shape": "image", "title": "GIHWR:51.6, avg_pick:11.53", "url": "WUR_combo_network_Ringing_Strike_Mastery"}, {"color": "#97c2fc", "id": "Highspire Bell-Ringer", "image": "img/Highspire_Bell-Ringer.png", "label": "Highspire Bell-Ringer", "shape": "image", "title": "GIHWR:51.4, avg_pick:11.53", "url": "WUR_combo_network_Highspire_Bell-Ringer"}, {"color": "#97c2fc", "id": "Humbling Elder", "image": "img/Humbling_Elder.png", "label": "Humbling Elder", "shape": "image", "title": "GIHWR:54.5, avg_pick:11.44", "url": "WUR_combo_network_Humbling_Elder"}, {"color": "#97c2fc", "id": "Snowmelt Stag", "image": "img/Snowmelt_Stag.png", "label": "Snowmelt Stag", "shape": "image", "title": "GIHWR:53.7, avg_pick:11.82", "url": "WUR_combo_network_Snowmelt_Stag"}, {"color": "#97c2fc", "id": "Meticulous Artisan", "image": "img/Meticulous_Artisan.png", "label": "Meticulous Artisan", "shape": "image", "title": "GIHWR:54.6, avg_pick:11.29", "url": "WUR_combo_network_Meticulous_Artisan"}, {"color": "#97c2fc", "id": "Overwhelming Surge", "image": "img/Overwhelming_Surge.png", "label": "Overwhelming Surge", "shape": "image", "title": "GIHWR:53.7, avg_pick:5.4", "url": "WUR_combo_network_Overwhelming_Surge"}, {"color": "#97c2fc", "id": "Ureni\u0027s Rebuff", "image": "img/Ureni\u0027s_Rebuff.png", "label": "Ureni\u0027s Rebuff", "shape": "image", "title": "GIHWR:56.4, avg_pick:6.15", "url": "WUR_combo_network_Ureni\u0027s_Rebuff"}, {"color": "#97c2fc", "id": "Rescue Leopard", "image": "img/Rescue_Leopard.png", "label": "Rescue Leopard", "shape": "image", "title": "GIHWR:53.5, avg_pick:10.45", "url": "WUR_combo_network_Rescue_Leopard"}]);
+                  edges = new vis.DataSet([{"from": "Dalkovan Packbeasts", "label": "4.3", "title": "combo_ct:1302, comboWR:60.45, combo+-:4.3, AB_AveWR:56.15", "to": "Duty Beyond Death", "value": 1302}, {"from": "Dalkovan Packbeasts", "label": "3.1", "title": "combo_ct:1411, comboWR:60.95, combo+-:3.1, AB_AveWR:57.85", "to": "Rally the Monastery", "value": 1411}, {"from": "Dalkovan Packbeasts", "label": "3.34", "title": "combo_ct:1333, comboWR:59.79, combo+-:3.34, AB_AveWR:56.45", "to": "Static Snare", "value": 1333}, {"from": "Dalkovan Packbeasts", "label": "4.9", "title": "combo_ct:1750, comboWR:62.0, combo+-:4.9, AB_AveWR:57.1", "to": "Shocking Sharpshooter", "value": 1750}, {"from": "Dalkovan Packbeasts", "label": "4.31", "title": "combo_ct:1456, comboWR:60.71, combo+-:4.31, AB_AveWR:56.4", "to": "War Effort", "value": 1456}, {"from": "Duty Beyond Death", "label": "3.87", "title": "combo_ct:3319, comboWR:60.02, combo+-:3.87, AB_AveWR:56.15", "to": "Fortress Kin-Guard", "value": 3319}, {"from": "Duty Beyond Death", "label": "5.09", "title": "combo_ct:3079, comboWR:61.94, combo+-:5.09, AB_AveWR:56.85", "to": "Mardu Devotee", "value": 3079}, {"from": "Duty Beyond Death", "label": "3.63", "title": "combo_ct:3297, comboWR:60.33, combo+-:3.63, AB_AveWR:56.7", "to": "Salt Road Packbeast", "value": 3297}, {"from": "Duty Beyond Death", "label": "3.86", "title": "combo_ct:1417, comboWR:58.36, combo+-:3.86, AB_AveWR:54.5", "to": "Underfoot Underdogs", "value": 1417}, {"from": "Rally the Monastery", "label": "3.17", "title": "combo_ct:4291, comboWR:61.57, combo+-:3.17, AB_AveWR:58.4", "to": "Salt Road Packbeast", "value": 4291}, {"from": "Rally the Monastery", "label": "3.32", "title": "combo_ct:1648, comboWR:60.92, combo+-:3.32, AB_AveWR:57.6", "to": "Static Snare", "value": 1648}, {"from": "Rally the Monastery", "label": "4.9", "title": "combo_ct:1372, comboWR:62.1, combo+-:4.9, AB_AveWR:57.2", "to": "Dirgur Island Dragon", "value": 1372}, {"from": "Rally the Monastery", "label": "3.86", "title": "combo_ct:1802, comboWR:62.21, combo+-:3.86, AB_AveWR:58.35", "to": "Dispelling Exhale", "value": 1802}, {"from": "Rally the Monastery", "label": "3.01", "title": "combo_ct:1276, comboWR:60.66, combo+-:3.01, AB_AveWR:57.65", "to": "Riverwalk Technique", "value": 1276}, {"from": "Rally the Monastery", "label": "6.37", "title": "combo_ct:2085, comboWR:65.37, combo+-:6.37, AB_AveWR:59.0", "to": "Sibsig Appraiser", "value": 2085}, {"from": "Rally the Monastery", "label": "5.71", "title": "combo_ct:1085, comboWR:63.96, combo+-:5.71, AB_AveWR:58.25", "to": "Wingblade Disciple", "value": 1085}, {"from": "Rally the Monastery", "label": "4.56", "title": "combo_ct:1398, comboWR:62.16, combo+-:4.56, AB_AveWR:57.6", "to": "Equilibrium Adept", "value": 1398}, {"from": "Rally the Monastery", "label": "3.28", "title": "combo_ct:2639, comboWR:59.83, combo+-:3.28, AB_AveWR:56.55", "to": "Jeskai Devotee", "value": 2639}, {"from": "Rally the Monastery", "label": "3.86", "title": "combo_ct:3285, comboWR:62.01, combo+-:3.86, AB_AveWR:58.15", "to": "Molten Exhale", "value": 3285}, {"from": "Rally the Monastery", "label": "4.57", "title": "combo_ct:1456, comboWR:62.77, combo+-:4.57, AB_AveWR:58.2", "to": "Sunset Strikemaster", "value": 1456}, {"from": "Rally the Monastery", "label": "3.16", "title": "combo_ct:1491, comboWR:59.36, combo+-:3.16, AB_AveWR:56.2", "to": "Underfoot Underdogs", "value": 1491}, {"from": "Rally the Monastery", "label": "4.22", "title": "combo_ct:1198, comboWR:61.77, combo+-:4.22, AB_AveWR:57.55", "to": "War Effort", "value": 1198}, {"from": "Rally the Monastery", "label": "4.04", "title": "combo_ct:1347, comboWR:62.44, combo+-:4.04, AB_AveWR:58.4", "to": "Jeskai Shrinekeeper", "value": 1347}, {"from": "Rally the Monastery", "label": "5.04", "title": "combo_ct:1534, comboWR:60.89, combo+-:5.04, AB_AveWR:55.85", "to": "Monastery Messenger", "value": 1534}, {"from": "Static Snare", "label": "3.45", "title": "combo_ct:3334, comboWR:59.9, combo+-:3.45, AB_AveWR:56.45", "to": "Fortress Kin-Guard", "value": 3334}, {"from": "Static Snare", "label": "3.24", "title": "combo_ct:3906, comboWR:60.24, combo+-:3.24, AB_AveWR:57.0", "to": "Salt Road Packbeast", "value": 3906}, {"from": "Static Snare", "label": "3.43", "title": "combo_ct:1385, comboWR:59.78, combo+-:3.43, AB_AveWR:56.35", "to": "Teeming Dragonstorm", "value": 1385}, {"from": "Static Snare", "label": "3.29", "title": "combo_ct:1713, comboWR:60.89, combo+-:3.29, AB_AveWR:57.6", "to": "Sibsig Appraiser", "value": 1713}, {"from": "Static Snare", "label": "3.28", "title": "combo_ct:1044, comboWR:59.58, combo+-:3.28, AB_AveWR:56.3", "to": "Unending Whisper", "value": 1044}, {"from": "Static Snare", "label": "6.03", "title": "combo_ct:1147, comboWR:63.03, combo+-:6.03, AB_AveWR:57.0", "to": "Jeskai Shrinekeeper", "value": 1147}, {"from": "Shocking Sharpshooter", "label": "4.3", "title": "combo_ct:4079, comboWR:61.95, combo+-:4.3, AB_AveWR:57.65", "to": "Salt Road Packbeast", "value": 4079}, {"from": "Shocking Sharpshooter", "label": "4.46", "title": "combo_ct:1249, comboWR:60.61, combo+-:4.46, AB_AveWR:56.15", "to": "Fleeting Effigy", "value": 1249}, {"from": "War Effort", "label": "3.31", "title": "combo_ct:1370, comboWR:60.36, combo+-:3.31, AB_AveWR:57.05", "to": "Descendant of Storms", "value": 1370}, {"from": "War Effort", "label": "4.19", "title": "combo_ct:3498, comboWR:61.29, combo+-:4.19, AB_AveWR:57.1", "to": "Mardu Devotee", "value": 3498}, {"from": "War Effort", "label": "3.11", "title": "combo_ct:1294, comboWR:59.51, combo+-:3.11, AB_AveWR:56.4", "to": "Sunpearl Kirin", "value": 1294}, {"from": "Stormplain Detainment", "label": "3.15", "title": "combo_ct:3061, comboWR:59.75, combo+-:3.15, AB_AveWR:56.6", "to": "Descendant of Storms", "value": 3061}, {"from": "Stormplain Detainment", "label": "3.69", "title": "combo_ct:3102, comboWR:59.54, combo+-:3.69, AB_AveWR:55.85", "to": "Teeming Dragonstorm", "value": 3102}, {"from": "Stormplain Detainment", "label": "3.42", "title": "combo_ct:1232, comboWR:59.17, combo+-:3.42, AB_AveWR:55.75", "to": "Bewildering Blizzard", "value": 1232}, {"from": "Stormplain Detainment", "label": "3.84", "title": "combo_ct:1122, comboWR:59.89, combo+-:3.84, AB_AveWR:56.05", "to": "Kishla Trawlers", "value": 1122}, {"from": "Stormplain Detainment", "label": "5.85", "title": "combo_ct:1556, comboWR:62.85, combo+-:5.85, AB_AveWR:57.0", "to": "Roiling Dragonstorm", "value": 1556}, {"from": "Stormplain Detainment", "label": "3.85", "title": "combo_ct:3426, comboWR:60.95, combo+-:3.85, AB_AveWR:57.1", "to": "Sibsig Appraiser", "value": 3426}, {"from": "Stormplain Detainment", "label": "3.13", "title": "combo_ct:2145, comboWR:58.93, combo+-:3.13, AB_AveWR:55.8", "to": "Unending Whisper", "value": 2145}, {"from": "Stormplain Detainment", "label": "3.52", "title": "combo_ct:2449, comboWR:60.02, combo+-:3.52, AB_AveWR:56.5", "to": "Jeskai Shrinekeeper", "value": 2449}, {"from": "Fortress Kin-Guard", "label": "3.31", "title": "combo_ct:10941, comboWR:60.56, combo+-:3.31, AB_AveWR:57.25", "to": "Salt Road Packbeast", "value": 10941}, {"from": "Mardu Devotee", "label": "3.17", "title": "combo_ct:3809, comboWR:60.57, combo+-:3.17, AB_AveWR:57.4", "to": "Sunpearl Kirin", "value": 3809}, {"from": "Mardu Devotee", "label": "3.05", "title": "combo_ct:2314, comboWR:60.2, combo+-:3.05, AB_AveWR:57.15", "to": "Equilibrium Adept", "value": 2314}, {"from": "Mardu Devotee", "label": "3.77", "title": "combo_ct:1105, comboWR:61.72, combo+-:3.77, AB_AveWR:57.95", "to": "Jeskai Shrinekeeper", "value": 1105}, {"from": "Salt Road Packbeast", "label": "4.2", "title": "combo_ct:1404, comboWR:61.25, combo+-:4.2, AB_AveWR:57.05", "to": "Riverwalk Technique", "value": 1404}, {"from": "Salt Road Packbeast", "label": "3.67", "title": "combo_ct:2584, comboWR:62.07, combo+-:3.67, AB_AveWR:58.4", "to": "Sibsig Appraiser", "value": 2584}, {"from": "Salt Road Packbeast", "label": "3.15", "title": "combo_ct:1278, comboWR:60.8, combo+-:3.15, AB_AveWR:57.65", "to": "Wingblade Disciple", "value": 1278}, {"from": "Salt Road Packbeast", "label": "3.13", "title": "combo_ct:1856, comboWR:59.43, combo+-:3.13, AB_AveWR:56.3", "to": "Fleeting Effigy", "value": 1856}, {"from": "Sunpearl Kirin", "label": "3.38", "title": "combo_ct:1021, comboWR:60.53, combo+-:3.38, AB_AveWR:57.15", "to": "Riverwheel Sweep", "value": 1021}, {"from": "Equilibrium Adept", "label": "3.24", "title": "combo_ct:1767, comboWR:58.69, combo+-:3.24, AB_AveWR:55.45", "to": "Osseous Exhale", "value": 1767}, {"from": "Equilibrium Adept", "label": "3.4", "title": "combo_ct:1248, comboWR:60.9, combo+-:3.4, AB_AveWR:57.5", "to": "Roiling Dragonstorm", "value": 1248}, {"from": "Equilibrium Adept", "label": "4.28", "title": "combo_ct:1073, comboWR:60.58, combo+-:4.28, AB_AveWR:56.3", "to": "Ureni\u0027s Rebuff", "value": 1073}, {"from": "Equilibrium Adept", "label": "5.45", "title": "combo_ct:1666, comboWR:62.3, combo+-:5.45, AB_AveWR:56.85", "to": "Wingblade Disciple", "value": 1666}, {"from": "Equilibrium Adept", "label": "3.09", "title": "combo_ct:1574, comboWR:59.59, combo+-:3.09, AB_AveWR:56.5", "to": "Channeled Dragonfire", "value": 1574}, {"from": "Equilibrium Adept", "label": "3.9", "title": "combo_ct:4645, comboWR:60.65, combo+-:3.9, AB_AveWR:56.75", "to": "Molten Exhale", "value": 4645}, {"from": "Equilibrium Adept", "label": "3.22", "title": "combo_ct:1095, comboWR:58.17, combo+-:3.22, AB_AveWR:54.95", "to": "Overwhelming Surge", "value": 1095}, {"from": "Equilibrium Adept", "label": "4.5", "title": "combo_ct:2155, comboWR:61.3, combo+-:4.5, AB_AveWR:56.8", "to": "Sunset Strikemaster", "value": 2155}, {"from": "Equilibrium Adept", "label": "3.35", "title": "combo_ct:1551, comboWR:60.35, combo+-:3.35, AB_AveWR:57.0", "to": "Jeskai Shrinekeeper", "value": 1551}, {"from": "Equilibrium Adept", "label": "3.97", "title": "combo_ct:1707, comboWR:60.87, combo+-:3.97, AB_AveWR:56.9", "to": "Riverwheel Sweep", "value": 1707}, {"from": "Jeskai Shrinekeeper", "label": "6.05", "title": "combo_ct:2525, comboWR:62.3, combo+-:6.05, AB_AveWR:56.25", "to": "Osseous Exhale", "value": 2525}, {"from": "Jeskai Shrinekeeper", "label": "5.19", "title": "combo_ct:1609, comboWR:62.34, combo+-:5.19, AB_AveWR:57.15", "to": "Teeming Dragonstorm", "value": 1609}, {"from": "Jeskai Shrinekeeper", "label": "4.08", "title": "combo_ct:1608, comboWR:61.13, combo+-:4.08, AB_AveWR:57.05", "to": "Bewildering Blizzard", "value": 1608}, {"from": "Jeskai Shrinekeeper", "label": "5.76", "title": "combo_ct:3443, comboWR:62.36, combo+-:5.76, AB_AveWR:56.6", "to": "Dirgur Island Dragon", "value": 3443}, {"from": "Jeskai Shrinekeeper", "label": "5.52", "title": "combo_ct:4628, comboWR:63.27, combo+-:5.52, AB_AveWR:57.75", "to": "Dispelling Exhale", "value": 4628}, {"from": "Jeskai Shrinekeeper", "label": "3.95", "title": "combo_ct:3671, comboWR:60.45, combo+-:3.95, AB_AveWR:56.5", "to": "Focus the Mind", "value": 3671}, {"from": "Jeskai Shrinekeeper", "label": "5.9", "title": "combo_ct:1902, comboWR:63.35, combo+-:5.9, AB_AveWR:57.45", "to": "Fresh Start", "value": 1902}, {"from": "Jeskai Shrinekeeper", "label": "7.78", "title": "combo_ct:1220, comboWR:63.93, combo+-:7.78, AB_AveWR:56.15", "to": "Humbling Elder", "value": 1220}, {"from": "Jeskai Shrinekeeper", "label": "5.61", "title": "combo_ct:1704, comboWR:62.21, combo+-:5.61, AB_AveWR:56.6", "to": "Iceridge Serpent", "value": 1704}, {"from": "Jeskai Shrinekeeper", "label": "5.5", "title": "combo_ct:1615, comboWR:62.85, combo+-:5.5, AB_AveWR:57.35", "to": "Kishla Trawlers", "value": 1615}, {"from": "Jeskai Shrinekeeper", "label": "5.42", "title": "combo_ct:3192, comboWR:62.47, combo+-:5.42, AB_AveWR:57.05", "to": "Riverwalk Technique", "value": 3192}, {"from": "Jeskai Shrinekeeper", "label": "4.84", "title": "combo_ct:2355, comboWR:63.14, combo+-:4.84, AB_AveWR:58.3", "to": "Roiling Dragonstorm", "value": 2355}, {"from": "Jeskai Shrinekeeper", "label": "3.95", "title": "combo_ct:4818, comboWR:62.35, combo+-:3.95, AB_AveWR:58.4", "to": "Sibsig Appraiser", "value": 4818}, {"from": "Jeskai Shrinekeeper", "label": "5.77", "title": "combo_ct:1267, comboWR:63.22, combo+-:5.77, AB_AveWR:57.45", "to": "Spectral Denial", "value": 1267}, {"from": "Jeskai Shrinekeeper", "label": "5.65", "title": "combo_ct:2230, comboWR:61.7, combo+-:5.65, AB_AveWR:56.05", "to": "Temur Devotee", "value": 2230}, {"from": "Jeskai Shrinekeeper", "label": "4.79", "title": "combo_ct:3138, comboWR:61.89, combo+-:4.79, AB_AveWR:57.1", "to": "Unending Whisper", "value": 3138}, {"from": "Jeskai Shrinekeeper", "label": "5.79", "title": "combo_ct:1493, comboWR:62.89, combo+-:5.79, AB_AveWR:57.1", "to": "Ureni\u0027s Rebuff", "value": 1493}, {"from": "Jeskai Shrinekeeper", "label": "5.07", "title": "combo_ct:2253, comboWR:62.72, combo+-:5.07, AB_AveWR:57.65", "to": "Wingblade Disciple", "value": 2253}, {"from": "Jeskai Shrinekeeper", "label": "4.77", "title": "combo_ct:1400, comboWR:62.07, combo+-:4.77, AB_AveWR:57.3", "to": "Channeled Dragonfire", "value": 1400}, {"from": "Jeskai Shrinekeeper", "label": "4.57", "title": "combo_ct:1113, comboWR:61.37, combo+-:4.57, AB_AveWR:56.8", "to": "Iridescent Tiger", "value": 1113}, {"from": "Jeskai Shrinekeeper", "label": "4.66", "title": "combo_ct:3714, comboWR:60.61, combo+-:4.66, AB_AveWR:55.95", "to": "Jeskai Devotee", "value": 3714}, {"from": "Jeskai Shrinekeeper", "label": "6.07", "title": "combo_ct:4514, comboWR:63.62, combo+-:6.07, AB_AveWR:57.55", "to": "Molten Exhale", "value": 4514}, {"from": "Jeskai Shrinekeeper", "label": "4.08", "title": "combo_ct:3815, comboWR:60.68, combo+-:4.08, AB_AveWR:56.6", "to": "Narset\u0027s Rebuke", "value": 3815}, {"from": "Jeskai Shrinekeeper", "label": "3.14", "title": "combo_ct:1007, comboWR:58.79, combo+-:3.14, AB_AveWR:55.65", "to": "Rescue Leopard", "value": 1007}, {"from": "Jeskai Shrinekeeper", "label": "3.2", "title": "combo_ct:2611, comboWR:59.25, combo+-:3.2, AB_AveWR:56.05", "to": "Stormshriek Feral", "value": 2611}, {"from": "Jeskai Shrinekeeper", "label": "7.88", "title": "combo_ct:1579, comboWR:65.48, combo+-:7.88, AB_AveWR:57.6", "to": "Sunset Strikemaster", "value": 1579}, {"from": "Jeskai Shrinekeeper", "label": "4.98", "title": "combo_ct:1075, comboWR:60.28, combo+-:4.98, AB_AveWR:55.3", "to": "Twin Bolt", "value": 1075}, {"from": "Jeskai Shrinekeeper", "label": "4.8", "title": "combo_ct:2781, comboWR:60.05, combo+-:4.8, AB_AveWR:55.25", "to": "Monastery Messenger", "value": 2781}, {"from": "Jeskai Shrinekeeper", "label": "4.76", "title": "combo_ct:2243, comboWR:62.46, combo+-:4.76, AB_AveWR:57.7", "to": "Riverwheel Sweep", "value": 2243}, {"from": "Jeskai Shrinekeeper", "label": "4.11", "title": "combo_ct:1784, comboWR:60.71, combo+-:4.11, AB_AveWR:56.6", "to": "Runescale Stormbrood", "value": 1784}, {"from": "Jeskai Shrinekeeper", "label": "5.81", "title": "combo_ct:1981, comboWR:64.16, combo+-:5.81, AB_AveWR:58.35", "to": "Twinmaw Stormbrood", "value": 1981}, {"from": "Teeming Dragonstorm", "label": "4.32", "title": "combo_ct:2782, comboWR:59.92, combo+-:4.32, AB_AveWR:55.6", "to": "Osseous Exhale", "value": 2782}, {"from": "Teeming Dragonstorm", "label": "5.69", "title": "combo_ct:2247, comboWR:61.64, combo+-:5.69, AB_AveWR:55.95", "to": "Dirgur Island Dragon", "value": 2247}, {"from": "Teeming Dragonstorm", "label": "5.12", "title": "combo_ct:2626, comboWR:62.22, combo+-:5.12, AB_AveWR:57.1", "to": "Dispelling Exhale", "value": 2626}, {"from": "Teeming Dragonstorm", "label": "5.12", "title": "combo_ct:1686, comboWR:60.97, combo+-:5.12, AB_AveWR:55.85", "to": "Focus the Mind", "value": 1686}, {"from": "Teeming Dragonstorm", "label": "5.89", "title": "combo_ct:1530, comboWR:62.29, combo+-:5.89, AB_AveWR:56.4", "to": "Riverwalk Technique", "value": 1530}, {"from": "Teeming Dragonstorm", "label": "6.86", "title": "combo_ct:1440, comboWR:64.51, combo+-:6.86, AB_AveWR:57.65", "to": "Roiling Dragonstorm", "value": 1440}, {"from": "Teeming Dragonstorm", "label": "3.85", "title": "combo_ct:2656, comboWR:61.6, combo+-:3.85, AB_AveWR:57.75", "to": "Sibsig Appraiser", "value": 2656}, {"from": "Teeming Dragonstorm", "label": "3.03", "title": "combo_ct:1121, comboWR:58.43, combo+-:3.03, AB_AveWR:55.4", "to": "Temur Devotee", "value": 1121}, {"from": "Teeming Dragonstorm", "label": "4.71", "title": "combo_ct:1411, comboWR:61.16, combo+-:4.71, AB_AveWR:56.45", "to": "Unending Whisper", "value": 1411}, {"from": "Teeming Dragonstorm", "label": "3.68", "title": "combo_ct:3090, comboWR:60.58, combo+-:3.68, AB_AveWR:56.9", "to": "Molten Exhale", "value": 3090}, {"from": "Teeming Dragonstorm", "label": "3.46", "title": "combo_ct:2035, comboWR:59.41, combo+-:3.46, AB_AveWR:55.95", "to": "Narset\u0027s Rebuke", "value": 2035}, {"from": "Teeming Dragonstorm", "label": "3.68", "title": "combo_ct:2571, comboWR:59.08, combo+-:3.68, AB_AveWR:55.4", "to": "Stormshriek Feral", "value": 2571}, {"from": "Teeming Dragonstorm", "label": "4.37", "title": "combo_ct:1197, comboWR:61.32, combo+-:4.37, AB_AveWR:56.95", "to": "Sunset Strikemaster", "value": 1197}, {"from": "Teeming Dragonstorm", "label": "4.92", "title": "combo_ct:1186, comboWR:61.97, combo+-:4.92, AB_AveWR:57.05", "to": "Riverwheel Sweep", "value": 1186}, {"from": "Teeming Dragonstorm", "label": "5.72", "title": "combo_ct:1067, comboWR:61.67, combo+-:5.72, AB_AveWR:55.95", "to": "Runescale Stormbrood", "value": 1067}, {"from": "Teeming Dragonstorm", "label": "4.14", "title": "combo_ct:1824, comboWR:61.84, combo+-:4.14, AB_AveWR:57.7", "to": "Twinmaw Stormbrood", "value": 1824}, {"from": "Osseous Exhale", "label": "3.41", "title": "combo_ct:2937, comboWR:58.46, combo+-:3.41, AB_AveWR:55.05", "to": "Dirgur Island Dragon", "value": 2937}, {"from": "Osseous Exhale", "label": "4.07", "title": "combo_ct:3143, comboWR:59.02, combo+-:4.07, AB_AveWR:54.95", "to": "Focus the Mind", "value": 3143}, {"from": "Osseous Exhale", "label": "3.84", "title": "combo_ct:1496, comboWR:58.89, combo+-:3.84, AB_AveWR:55.05", "to": "Iceridge Serpent", "value": 1496}, {"from": "Osseous Exhale", "label": "3.04", "title": "combo_ct:2296, comboWR:58.54, combo+-:3.04, AB_AveWR:55.5", "to": "Riverwalk Technique", "value": 2296}, {"from": "Osseous Exhale", "label": "7.81", "title": "combo_ct:1786, comboWR:64.56, combo+-:7.81, AB_AveWR:56.75", "to": "Roiling Dragonstorm", "value": 1786}, {"from": "Osseous Exhale", "label": "5.29", "title": "combo_ct:3550, comboWR:62.14, combo+-:5.29, AB_AveWR:56.85", "to": "Sibsig Appraiser", "value": 3550}, {"from": "Osseous Exhale", "label": "3.5", "title": "combo_ct:2154, comboWR:59.05, combo+-:3.5, AB_AveWR:55.55", "to": "Unending Whisper", "value": 2154}, {"from": "Osseous Exhale", "label": "3.1", "title": "combo_ct:2890, comboWR:59.9, combo+-:3.1, AB_AveWR:56.8", "to": "Twinmaw Stormbrood", "value": 2890}, {"from": "Dirgur Island Dragon", "label": "3.01", "title": "combo_ct:12254, comboWR:59.56, combo+-:3.01, AB_AveWR:56.55", "to": "Dispelling Exhale", "value": 12254}, {"from": "Dirgur Island Dragon", "label": "3.9", "title": "combo_ct:2176, comboWR:59.6, combo+-:3.9, AB_AveWR:55.7", "to": "Dragonstorm Forecaster", "value": 2176}, {"from": "Dirgur Island Dragon", "label": "3.01", "title": "combo_ct:5159, comboWR:59.26, combo+-:3.01, AB_AveWR:56.25", "to": "Fresh Start", "value": 5159}, {"from": "Dirgur Island Dragon", "label": "3.15", "title": "combo_ct:4401, comboWR:59.3, combo+-:3.15, AB_AveWR:56.15", "to": "Kishla Trawlers", "value": 4401}, {"from": "Dirgur Island Dragon", "label": "5.22", "title": "combo_ct:6192, comboWR:62.32, combo+-:5.22, AB_AveWR:57.1", "to": "Roiling Dragonstorm", "value": 6192}, {"from": "Dirgur Island Dragon", "label": "3.5", "title": "combo_ct:13059, comboWR:60.7, combo+-:3.5, AB_AveWR:57.2", "to": "Sibsig Appraiser", "value": 13059}, {"from": "Dirgur Island Dragon", "label": "3.69", "title": "combo_ct:7775, comboWR:60.04, combo+-:3.69, AB_AveWR:56.35", "to": "Molten Exhale", "value": 7775}, {"from": "Dirgur Island Dragon", "label": "3.82", "title": "combo_ct:2315, comboWR:60.22, combo+-:3.82, AB_AveWR:56.4", "to": "Sunset Strikemaster", "value": 2315}, {"from": "Dirgur Island Dragon", "label": "6.01", "title": "combo_ct:2663, comboWR:63.16, combo+-:6.01, AB_AveWR:57.15", "to": "Twinmaw Stormbrood", "value": 2663}, {"from": "Focus the Mind", "label": "3.93", "title": "combo_ct:4872, comboWR:60.08, combo+-:3.93, AB_AveWR:56.15", "to": "Fresh Start", "value": 4872}, {"from": "Focus the Mind", "label": "3.66", "title": "combo_ct:4463, comboWR:59.71, combo+-:3.66, AB_AveWR:56.05", "to": "Kishla Trawlers", "value": 4463}, {"from": "Focus the Mind", "label": "3.02", "title": "combo_ct:1526, comboWR:56.42, combo+-:3.02, AB_AveWR:53.4", "to": "Ringing Strike Mastery", "value": 1526}, {"from": "Focus the Mind", "label": "3.63", "title": "combo_ct:4432, comboWR:60.63, combo+-:3.63, AB_AveWR:57.0", "to": "Roiling Dragonstorm", "value": 4432}, {"from": "Focus the Mind", "label": "3.22", "title": "combo_ct:3569, comboWR:59.37, combo+-:3.22, AB_AveWR:56.15", "to": "Spectral Denial", "value": 3569}, {"from": "Focus the Mind", "label": "3.03", "title": "combo_ct:8070, comboWR:59.28, combo+-:3.03, AB_AveWR:56.25", "to": "Molten Exhale", "value": 8070}, {"from": "Focus the Mind", "label": "3.99", "title": "combo_ct:6731, comboWR:59.29, combo+-:3.99, AB_AveWR:55.3", "to": "Narset\u0027s Rebuke", "value": 6731}, {"from": "Focus the Mind", "label": "5.62", "title": "combo_ct:2576, comboWR:61.92, combo+-:5.62, AB_AveWR:56.3", "to": "Sunset Strikemaster", "value": 2576}, {"from": "Focus the Mind", "label": "5.36", "title": "combo_ct:2921, comboWR:62.41, combo+-:5.36, AB_AveWR:57.05", "to": "Twinmaw Stormbrood", "value": 2921}, {"from": "Iceridge Serpent", "label": "3.87", "title": "combo_ct:3091, comboWR:59.72, combo+-:3.87, AB_AveWR:55.85", "to": "Bewildering Blizzard", "value": 3091}, {"from": "Iceridge Serpent", "label": "3.08", "title": "combo_ct:3046, comboWR:59.23, combo+-:3.08, AB_AveWR:56.15", "to": "Kishla Trawlers", "value": 3046}, {"from": "Iceridge Serpent", "label": "3.25", "title": "combo_ct:3135, comboWR:60.35, combo+-:3.25, AB_AveWR:57.1", "to": "Roiling Dragonstorm", "value": 3135}, {"from": "Iceridge Serpent", "label": "3.68", "title": "combo_ct:8877, comboWR:60.88, combo+-:3.68, AB_AveWR:57.2", "to": "Sibsig Appraiser", "value": 8877}, {"from": "Iceridge Serpent", "label": "3.02", "title": "combo_ct:5268, comboWR:58.92, combo+-:3.02, AB_AveWR:55.9", "to": "Unending Whisper", "value": 5268}, {"from": "Iceridge Serpent", "label": "3.39", "title": "combo_ct:4680, comboWR:59.74, combo+-:3.39, AB_AveWR:56.35", "to": "Molten Exhale", "value": 4680}, {"from": "Iceridge Serpent", "label": "3.2", "title": "combo_ct:3292, comboWR:58.6, combo+-:3.2, AB_AveWR:55.4", "to": "Narset\u0027s Rebuke", "value": 3292}, {"from": "Iceridge Serpent", "label": "4.66", "title": "combo_ct:2230, comboWR:59.51, combo+-:4.66, AB_AveWR:54.85", "to": "Stormshriek Feral", "value": 2230}, {"from": "Iceridge Serpent", "label": "4.81", "title": "combo_ct:1387, comboWR:61.21, combo+-:4.81, AB_AveWR:56.4", "to": "Sunset Strikemaster", "value": 1387}, {"from": "Iceridge Serpent", "label": "3.46", "title": "combo_ct:1798, comboWR:59.96, combo+-:3.46, AB_AveWR:56.5", "to": "Riverwheel Sweep", "value": 1798}, {"from": "Iceridge Serpent", "label": "3.2", "title": "combo_ct:1561, comboWR:60.35, combo+-:3.2, AB_AveWR:57.15", "to": "Twinmaw Stormbrood", "value": 1561}, {"from": "Iceridge Serpent", "label": "3.44", "title": "combo_ct:1478, comboWR:58.59, combo+-:3.44, AB_AveWR:55.15", "to": "Whirlwing Stormbrood", "value": 1478}, {"from": "Riverwalk Technique", "label": "3.89", "title": "combo_ct:4775, comboWR:60.19, combo+-:3.89, AB_AveWR:56.3", "to": "Bewildering Blizzard", "value": 4775}, {"from": "Riverwalk Technique", "label": "4.17", "title": "combo_ct:5236, comboWR:60.87, combo+-:4.17, AB_AveWR:56.7", "to": "Fresh Start", "value": 5236}, {"from": "Riverwalk Technique", "label": "5.02", "title": "combo_ct:4864, comboWR:61.62, combo+-:5.02, AB_AveWR:56.6", "to": "Kishla Trawlers", "value": 4864}, {"from": "Riverwalk Technique", "label": "4.11", "title": "combo_ct:5658, comboWR:61.66, combo+-:4.11, AB_AveWR:57.55", "to": "Roiling Dragonstorm", "value": 5658}, {"from": "Riverwalk Technique", "label": "3.42", "title": "combo_ct:14353, comboWR:61.07, combo+-:3.42, AB_AveWR:57.65", "to": "Sibsig Appraiser", "value": 14353}, {"from": "Riverwalk Technique", "label": "4.04", "title": "combo_ct:4121, comboWR:60.74, combo+-:4.04, AB_AveWR:56.7", "to": "Spectral Denial", "value": 4121}, {"from": "Riverwalk Technique", "label": "3.52", "title": "combo_ct:7916, comboWR:59.87, combo+-:3.52, AB_AveWR:56.35", "to": "Unending Whisper", "value": 7916}, {"from": "Riverwalk Technique", "label": "3.95", "title": "combo_ct:2161, comboWR:59.05, combo+-:3.95, AB_AveWR:55.1", "to": "Veteran Ice Climber", "value": 2161}, {"from": "Riverwalk Technique", "label": "3.21", "title": "combo_ct:4665, comboWR:60.11, combo+-:3.21, AB_AveWR:56.9", "to": "Wingblade Disciple", "value": 4665}, {"from": "Riverwalk Technique", "label": "4.38", "title": "combo_ct:1207, comboWR:58.33, combo+-:4.38, AB_AveWR:53.95", "to": "Breaching Dragonstorm", "value": 1207}, {"from": "Riverwalk Technique", "label": "3.46", "title": "combo_ct:1662, comboWR:59.51, combo+-:3.46, AB_AveWR:56.05", "to": "Iridescent Tiger", "value": 1662}, {"from": "Riverwalk Technique", "label": "4.0", "title": "combo_ct:1265, comboWR:59.45, combo+-:4.0, AB_AveWR:55.45", "to": "Meticulous Artisan", "value": 1265}, {"from": "Riverwalk Technique", "label": "3.63", "title": "combo_ct:7092, comboWR:60.43, combo+-:3.63, AB_AveWR:56.8", "to": "Molten Exhale", "value": 7092}, {"from": "Riverwalk Technique", "label": "6.72", "title": "combo_ct:2612, comboWR:64.32, combo+-:6.72, AB_AveWR:57.6", "to": "Twinmaw Stormbrood", "value": 2612}, {"from": "Riverwalk Technique", "label": "3.41", "title": "combo_ct:2776, comboWR:59.01, combo+-:3.41, AB_AveWR:55.6", "to": "Whirlwing Stormbrood", "value": 2776}, {"from": "Roiling Dragonstorm", "label": "3.74", "title": "combo_ct:2741, comboWR:61.29, combo+-:3.74, AB_AveWR:57.55", "to": "Bewildering Blizzard", "value": 2741}, {"from": "Roiling Dragonstorm", "label": "4.56", "title": "combo_ct:7676, comboWR:62.81, combo+-:4.56, AB_AveWR:58.25", "to": "Dispelling Exhale", "value": 7676}, {"from": "Roiling Dragonstorm", "label": "5.21", "title": "combo_ct:1530, comboWR:62.61, combo+-:5.21, AB_AveWR:57.4", "to": "Dragonstorm Forecaster", "value": 1530}, {"from": "Roiling Dragonstorm", "label": "4.62", "title": "combo_ct:3321, comboWR:62.57, combo+-:4.62, AB_AveWR:57.95", "to": "Fresh Start", "value": 3321}, {"from": "Roiling Dragonstorm", "label": "3.22", "title": "combo_ct:1261, comboWR:59.87, combo+-:3.22, AB_AveWR:56.65", "to": "Humbling Elder", "value": 1261}, {"from": "Roiling Dragonstorm", "label": "4.92", "title": "combo_ct:2796, comboWR:62.77, combo+-:4.92, AB_AveWR:57.85", "to": "Kishla Trawlers", "value": 2796}, {"from": "Roiling Dragonstorm", "label": "3.47", "title": "combo_ct:8528, comboWR:62.37, combo+-:3.47, AB_AveWR:58.9", "to": "Sibsig Appraiser", "value": 8528}, {"from": "Roiling Dragonstorm", "label": "3.04", "title": "combo_ct:1076, comboWR:59.29, combo+-:3.04, AB_AveWR:56.25", "to": "Snowmelt Stag", "value": 1076}, {"from": "Roiling Dragonstorm", "label": "3.78", "title": "combo_ct:4280, comboWR:60.33, combo+-:3.78, AB_AveWR:56.55", "to": "Temur Devotee", "value": 4280}, {"from": "Roiling Dragonstorm", "label": "4.83", "title": "combo_ct:2769, comboWR:62.98, combo+-:4.83, AB_AveWR:58.15", "to": "Wingblade Disciple", "value": 2769}, {"from": "Roiling Dragonstorm", "label": "3.08", "title": "combo_ct:1245, comboWR:60.88, combo+-:3.08, AB_AveWR:57.8", "to": "Channeled Dragonfire", "value": 1245}, {"from": "Roiling Dragonstorm", "label": "6.05", "title": "combo_ct:4585, comboWR:64.1, combo+-:6.05, AB_AveWR:58.05", "to": "Molten Exhale", "value": 4585}, {"from": "Roiling Dragonstorm", "label": "5.62", "title": "combo_ct:3452, comboWR:62.72, combo+-:5.62, AB_AveWR:57.1", "to": "Narset\u0027s Rebuke", "value": 3452}, {"from": "Roiling Dragonstorm", "label": "5.33", "title": "combo_ct:3287, comboWR:61.88, combo+-:5.33, AB_AveWR:56.55", "to": "Stormshriek Feral", "value": 3287}, {"from": "Roiling Dragonstorm", "label": "3.77", "title": "combo_ct:1398, comboWR:61.87, combo+-:3.77, AB_AveWR:58.1", "to": "Sunset Strikemaster", "value": 1398}, {"from": "Roiling Dragonstorm", "label": "3.55", "title": "combo_ct:1705, comboWR:59.3, combo+-:3.55, AB_AveWR:55.75", "to": "Monastery Messenger", "value": 1705}, {"from": "Roiling Dragonstorm", "label": "3.11", "title": "combo_ct:1623, comboWR:61.31, combo+-:3.11, AB_AveWR:58.2", "to": "Riverwheel Sweep", "value": 1623}, {"from": "Roiling Dragonstorm", "label": "7.22", "title": "combo_ct:2430, comboWR:64.32, combo+-:7.22, AB_AveWR:57.1", "to": "Runescale Stormbrood", "value": 2430}, {"from": "Roiling Dragonstorm", "label": "6.24", "title": "combo_ct:1942, comboWR:65.09, combo+-:6.24, AB_AveWR:58.85", "to": "Twinmaw Stormbrood", "value": 1942}, {"from": "Roiling Dragonstorm", "label": "5.27", "title": "combo_ct:2252, comboWR:62.12, combo+-:5.27, AB_AveWR:56.85", "to": "Whirlwing Stormbrood", "value": 2252}, {"from": "Sibsig Appraiser", "label": "3.38", "title": "combo_ct:7336, comboWR:61.03, combo+-:3.38, AB_AveWR:57.65", "to": "Bewildering Blizzard", "value": 7336}, {"from": "Sibsig Appraiser", "label": "3.68", "title": "combo_ct:19040, comboWR:62.03, combo+-:3.68, AB_AveWR:58.35", "to": "Dispelling Exhale", "value": 19040}, {"from": "Sibsig Appraiser", "label": "4.19", "title": "combo_ct:8555, comboWR:62.24, combo+-:4.19, AB_AveWR:58.05", "to": "Fresh Start", "value": 8555}, {"from": "Sibsig Appraiser", "label": "4.44", "title": "combo_ct:7447, comboWR:62.39, combo+-:4.44, AB_AveWR:57.95", "to": "Kishla Trawlers", "value": 7447}, {"from": "Sibsig Appraiser", "label": "3.24", "title": "combo_ct:11923, comboWR:60.94, combo+-:3.24, AB_AveWR:57.7", "to": "Unending Whisper", "value": 11923}, {"from": "Sibsig Appraiser", "label": "4.1", "title": "combo_ct:7058, comboWR:62.35, combo+-:4.1, AB_AveWR:58.25", "to": "Wingblade Disciple", "value": 7058}, {"from": "Sibsig Appraiser", "label": "4.0", "title": "combo_ct:2412, comboWR:61.4, combo+-:4.0, AB_AveWR:57.4", "to": "Iridescent Tiger", "value": 2412}, {"from": "Sibsig Appraiser", "label": "3.76", "title": "combo_ct:1686, comboWR:60.56, combo+-:3.76, AB_AveWR:56.8", "to": "Meticulous Artisan", "value": 1686}, {"from": "Sibsig Appraiser", "label": "3.66", "title": "combo_ct:11428, comboWR:61.81, combo+-:3.66, AB_AveWR:58.15", "to": "Molten Exhale", "value": 11428}, {"from": "Sibsig Appraiser", "label": "4.71", "title": "combo_ct:8407, comboWR:61.91, combo+-:4.71, AB_AveWR:57.2", "to": "Narset\u0027s Rebuke", "value": 8407}, {"from": "Sibsig Appraiser", "label": "3.92", "title": "combo_ct:2039, comboWR:60.27, combo+-:3.92, AB_AveWR:56.35", "to": "Overwhelming Surge", "value": 2039}, {"from": "Sibsig Appraiser", "label": "4.31", "title": "combo_ct:3430, comboWR:62.51, combo+-:4.31, AB_AveWR:58.2", "to": "Sunset Strikemaster", "value": 3430}, {"from": "Sibsig Appraiser", "label": "3.35", "title": "combo_ct:4431, comboWR:60.55, combo+-:3.35, AB_AveWR:57.2", "to": "Runescale Stormbrood", "value": 4431}, {"from": "Sibsig Appraiser", "label": "5.14", "title": "combo_ct:4049, comboWR:64.09, combo+-:5.14, AB_AveWR:58.95", "to": "Twinmaw Stormbrood", "value": 4049}, {"from": "Sibsig Appraiser", "label": "4.41", "title": "combo_ct:4472, comboWR:61.36, combo+-:4.41, AB_AveWR:56.95", "to": "Whirlwing Stormbrood", "value": 4472}, {"from": "Unending Whisper", "label": "4.39", "title": "combo_ct:4537, comboWR:61.14, combo+-:4.39, AB_AveWR:56.75", "to": "Fresh Start", "value": 4537}, {"from": "Unending Whisper", "label": "3.44", "title": "combo_ct:2503, comboWR:58.89, combo+-:3.44, AB_AveWR:55.45", "to": "Humbling Elder", "value": 2503}, {"from": "Unending Whisper", "label": "3.07", "title": "combo_ct:4362, comboWR:59.72, combo+-:3.07, AB_AveWR:56.65", "to": "Kishla Trawlers", "value": 4362}, {"from": "Unending Whisper", "label": "3.52", "title": "combo_ct:1309, comboWR:57.52, combo+-:3.52, AB_AveWR:54.0", "to": "Ringing Strike Mastery", "value": 1309}, {"from": "Unending Whisper", "label": "4.13", "title": "combo_ct:1999, comboWR:59.18, combo+-:4.13, AB_AveWR:55.05", "to": "Snowmelt Stag", "value": 1999}, {"from": "Unending Whisper", "label": "4.91", "title": "combo_ct:5380, comboWR:61.86, combo+-:4.91, AB_AveWR:56.95", "to": "Wingblade Disciple", "value": 5380}, {"from": "Unending Whisper", "label": "3.03", "title": "combo_ct:2133, comboWR:59.63, combo+-:3.03, AB_AveWR:56.6", "to": "Channeled Dragonfire", "value": 2133}, {"from": "Unending Whisper", "label": "4.03", "title": "combo_ct:1831, comboWR:60.13, combo+-:4.03, AB_AveWR:56.1", "to": "Iridescent Tiger", "value": 1831}, {"from": "Unending Whisper", "label": "4.57", "title": "combo_ct:6876, comboWR:61.42, combo+-:4.57, AB_AveWR:56.85", "to": "Molten Exhale", "value": 6876}, {"from": "Unending Whisper", "label": "3.6", "title": "combo_ct:5610, comboWR:59.5, combo+-:3.6, AB_AveWR:55.9", "to": "Narset\u0027s Rebuke", "value": 5610}, {"from": "Unending Whisper", "label": "3.26", "title": "combo_ct:1384, comboWR:58.31, combo+-:3.26, AB_AveWR:55.05", "to": "Overwhelming Surge", "value": 1384}, {"from": "Unending Whisper", "label": "3.68", "title": "combo_ct:3922, comboWR:59.03, combo+-:3.68, AB_AveWR:55.35", "to": "Stormshriek Feral", "value": 3922}, {"from": "Unending Whisper", "label": "4.46", "title": "combo_ct:2249, comboWR:61.36, combo+-:4.46, AB_AveWR:56.9", "to": "Sunset Strikemaster", "value": 2249}, {"from": "Unending Whisper", "label": "4.58", "title": "combo_ct:1519, comboWR:59.18, combo+-:4.58, AB_AveWR:54.6", "to": "Twin Bolt", "value": 1519}, {"from": "Unending Whisper", "label": "4.14", "title": "combo_ct:2815, comboWR:61.14, combo+-:4.14, AB_AveWR:57.0", "to": "Riverwheel Sweep", "value": 2815}, {"from": "Unending Whisper", "label": "3.04", "title": "combo_ct:2954, comboWR:58.94, combo+-:3.04, AB_AveWR:55.9", "to": "Runescale Stormbrood", "value": 2954}, {"from": "Unending Whisper", "label": "4.82", "title": "combo_ct:2425, comboWR:62.47, combo+-:4.82, AB_AveWR:57.65", "to": "Twinmaw Stormbrood", "value": 2425}, {"from": "Twinmaw Stormbrood", "label": "5.38", "title": "combo_ct:1367, comboWR:62.98, combo+-:5.38, AB_AveWR:57.6", "to": "Bewildering Blizzard", "value": 1367}, {"from": "Twinmaw Stormbrood", "label": "4.89", "title": "combo_ct:3820, comboWR:63.19, combo+-:4.89, AB_AveWR:58.3", "to": "Dispelling Exhale", "value": 3820}, {"from": "Twinmaw Stormbrood", "label": "4.64", "title": "combo_ct:1284, comboWR:62.54, combo+-:4.64, AB_AveWR:57.9", "to": "Kishla Trawlers", "value": 1284}, {"from": "Twinmaw Stormbrood", "label": "4.42", "title": "combo_ct:1506, comboWR:62.62, combo+-:4.42, AB_AveWR:58.2", "to": "Wingblade Disciple", "value": 1506}, {"from": "Twinmaw Stormbrood", "label": "3.09", "title": "combo_ct:3009, comboWR:59.59, combo+-:3.09, AB_AveWR:56.5", "to": "Jeskai Devotee", "value": 3009}, {"from": "Twinmaw Stormbrood", "label": "4.21", "title": "combo_ct:4691, comboWR:62.31, combo+-:4.21, AB_AveWR:58.1", "to": "Molten Exhale", "value": 4691}, {"from": "Twinmaw Stormbrood", "label": "3.34", "title": "combo_ct:3217, comboWR:60.49, combo+-:3.34, AB_AveWR:57.15", "to": "Narset\u0027s Rebuke", "value": 3217}, {"from": "Twinmaw Stormbrood", "label": "3.42", "title": "combo_ct:1362, comboWR:59.62, combo+-:3.42, AB_AveWR:56.2", "to": "Rescue Leopard", "value": 1362}, {"from": "Twinmaw Stormbrood", "label": "3.38", "title": "combo_ct:1825, comboWR:61.53, combo+-:3.38, AB_AveWR:58.15", "to": "Sunset Strikemaster", "value": 1825}, {"from": "Twinmaw Stormbrood", "label": "4.83", "title": "combo_ct:1058, comboWR:60.68, combo+-:4.83, AB_AveWR:55.85", "to": "Twin Bolt", "value": 1058}, {"from": "Twinmaw Stormbrood", "label": "4.24", "title": "combo_ct:1837, comboWR:60.04, combo+-:4.24, AB_AveWR:55.8", "to": "Monastery Messenger", "value": 1837}, {"from": "Twinmaw Stormbrood", "label": "3.33", "title": "combo_ct:1412, comboWR:60.48, combo+-:3.33, AB_AveWR:57.15", "to": "Runescale Stormbrood", "value": 1412}, {"from": "Dispelling Exhale", "label": "3.99", "title": "combo_ct:2947, comboWR:60.84, combo+-:3.99, AB_AveWR:56.85", "to": "Dragonstorm Forecaster", "value": 2947}, {"from": "Dispelling Exhale", "label": "3.03", "title": "combo_ct:7096, comboWR:60.43, combo+-:3.03, AB_AveWR:57.4", "to": "Fresh Start", "value": 7096}, {"from": "Dispelling Exhale", "label": "3.55", "title": "combo_ct:6266, comboWR:60.85, combo+-:3.55, AB_AveWR:57.3", "to": "Kishla Trawlers", "value": 6266}, {"from": "Dispelling Exhale", "label": "4.48", "title": "combo_ct:1835, comboWR:59.13, combo+-:4.48, AB_AveWR:54.65", "to": "Breaching Dragonstorm", "value": 1835}, {"from": "Dispelling Exhale", "label": "3.43", "title": "combo_ct:2185, comboWR:60.18, combo+-:3.43, AB_AveWR:56.75", "to": "Iridescent Tiger", "value": 2185}, {"from": "Dispelling Exhale", "label": "3.9", "title": "combo_ct:10094, comboWR:61.4, combo+-:3.9, AB_AveWR:57.5", "to": "Molten Exhale", "value": 10094}, {"from": "Dispelling Exhale", "label": "3.13", "title": "combo_ct:7490, comboWR:59.68, combo+-:3.13, AB_AveWR:56.55", "to": "Narset\u0027s Rebuke", "value": 7490}, {"from": "Dispelling Exhale", "label": "3.43", "title": "combo_ct:5777, comboWR:59.43, combo+-:3.43, AB_AveWR:56.0", "to": "Stormshriek Feral", "value": 5777}, {"from": "Dispelling Exhale", "label": "3.42", "title": "combo_ct:1546, comboWR:58.67, combo+-:3.42, AB_AveWR:55.25", "to": "Twin Bolt", "value": 1546}, {"from": "Dispelling Exhale", "label": "3.54", "title": "combo_ct:4382, comboWR:60.09, combo+-:3.54, AB_AveWR:56.55", "to": "Runescale Stormbrood", "value": 4382}, {"from": "Wingblade Disciple", "label": "3.01", "title": "combo_ct:3026, comboWR:60.31, combo+-:3.01, AB_AveWR:57.3", "to": "Fresh Start", "value": 3026}, {"from": "Wingblade Disciple", "label": "3.88", "title": "combo_ct:2899, comboWR:59.78, combo+-:3.88, AB_AveWR:55.9", "to": "Temur Devotee", "value": 2899}, {"from": "Wingblade Disciple", "label": "4.23", "title": "combo_ct:2429, comboWR:61.18, combo+-:4.23, AB_AveWR:56.95", "to": "Ureni\u0027s Rebuff", "value": 2429}, {"from": "Wingblade Disciple", "label": "4.76", "title": "combo_ct:1295, comboWR:60.46, combo+-:4.76, AB_AveWR:55.7", "to": "Veteran Ice Climber", "value": 1295}, {"from": "Wingblade Disciple", "label": "3.67", "title": "combo_ct:1493, comboWR:60.82, combo+-:3.67, AB_AveWR:57.15", "to": "Channeled Dragonfire", "value": 1493}, {"from": "Wingblade Disciple", "label": "3.88", "title": "combo_ct:1102, comboWR:60.53, combo+-:3.88, AB_AveWR:56.65", "to": "Iridescent Tiger", "value": 1102}, {"from": "Wingblade Disciple", "label": "4.43", "title": "combo_ct:4451, comboWR:61.83, combo+-:4.43, AB_AveWR:57.4", "to": "Molten Exhale", "value": 4451}, {"from": "Wingblade Disciple", "label": "3.29", "title": "combo_ct:3959, comboWR:59.74, combo+-:3.29, AB_AveWR:56.45", "to": "Narset\u0027s Rebuke", "value": 3959}, {"from": "Wingblade Disciple", "label": "3.32", "title": "combo_ct:2403, comboWR:59.22, combo+-:3.32, AB_AveWR:55.9", "to": "Stormshriek Feral", "value": 2403}, {"from": "Wingblade Disciple", "label": "5.09", "title": "combo_ct:1583, comboWR:62.54, combo+-:5.09, AB_AveWR:57.45", "to": "Sunset Strikemaster", "value": 1583}, {"from": "Wingblade Disciple", "label": "4.13", "title": "combo_ct:2007, comboWR:61.68, combo+-:4.13, AB_AveWR:57.55", "to": "Riverwheel Sweep", "value": 2007}, {"from": "Wingblade Disciple", "label": "4.08", "title": "combo_ct:1196, comboWR:60.28, combo+-:4.08, AB_AveWR:56.2", "to": "Whirlwing Stormbrood", "value": 1196}, {"from": "Jeskai Devotee", "label": "4.01", "title": "combo_ct:1655, comboWR:59.21, combo+-:4.01, AB_AveWR:55.2", "to": "Bewildering Blizzard", "value": 1655}, {"from": "Jeskai Devotee", "label": "3.17", "title": "combo_ct:3619, comboWR:59.02, combo+-:3.17, AB_AveWR:55.85", "to": "Riverwheel Sweep", "value": 3619}, {"from": "Molten Exhale", "label": "3.62", "title": "combo_ct:3843, comboWR:60.42, combo+-:3.62, AB_AveWR:56.8", "to": "Bewildering Blizzard", "value": 3843}, {"from": "Molten Exhale", "label": "3.33", "title": "combo_ct:1674, comboWR:59.98, combo+-:3.33, AB_AveWR:56.65", "to": "Dragonstorm Forecaster", "value": 1674}, {"from": "Molten Exhale", "label": "3.37", "title": "combo_ct:1677, comboWR:57.72, combo+-:3.37, AB_AveWR:54.35", "to": "Highspire Bell-Ringer", "value": 1677}, {"from": "Molten Exhale", "label": "3.91", "title": "combo_ct:4168, comboWR:61.01, combo+-:3.91, AB_AveWR:57.1", "to": "Kishla Trawlers", "value": 4168}, {"from": "Molten Exhale", "label": "3.72", "title": "combo_ct:2971, comboWR:60.92, combo+-:3.72, AB_AveWR:57.2", "to": "Spectral Denial", "value": 2971}, {"from": "Molten Exhale", "label": "4.15", "title": "combo_ct:3346, comboWR:61.0, combo+-:4.15, AB_AveWR:56.85", "to": "Ureni\u0027s Rebuff", "value": 3346}, {"from": "Molten Exhale", "label": "4.59", "title": "combo_ct:1665, comboWR:59.04, combo+-:4.59, AB_AveWR:54.45", "to": "Breaching Dragonstorm", "value": 1665}, {"from": "Molten Exhale", "label": "3.07", "title": "combo_ct:3906, comboWR:60.52, combo+-:3.07, AB_AveWR:57.45", "to": "Riverwheel Sweep", "value": 3906}, {"from": "Molten Exhale", "label": "3.65", "title": "combo_ct:4302, comboWR:60.0, combo+-:3.65, AB_AveWR:56.35", "to": "Runescale Stormbrood", "value": 4302}, {"from": "Molten Exhale", "label": "4.16", "title": "combo_ct:2114, comboWR:60.26, combo+-:4.16, AB_AveWR:56.1", "to": "Whirlwing Stormbrood", "value": 2114}, {"from": "Sunset Strikemaster", "label": "4.14", "title": "combo_ct:1240, comboWR:61.29, combo+-:4.14, AB_AveWR:57.15", "to": "Kishla Trawlers", "value": 1240}, {"from": "Sunset Strikemaster", "label": "3.36", "title": "combo_ct:1069, comboWR:59.96, combo+-:3.36, AB_AveWR:56.6", "to": "Iridescent Tiger", "value": 1069}, {"from": "Sunset Strikemaster", "label": "3.18", "title": "combo_ct:3491, comboWR:59.58, combo+-:3.18, AB_AveWR:56.4", "to": "Narset\u0027s Rebuke", "value": 3491}, {"from": "Sunset Strikemaster", "label": "3.93", "title": "combo_ct:1618, comboWR:61.43, combo+-:3.93, AB_AveWR:57.5", "to": "Riverwheel Sweep", "value": 1618}, {"from": "Channeled Dragonfire", "label": "3.12", "title": "combo_ct:1212, comboWR:60.07, combo+-:3.12, AB_AveWR:56.95", "to": "Fresh Start", "value": 1212}, {"from": "Channeled Dragonfire", "label": "3.77", "title": "combo_ct:1399, comboWR:60.97, combo+-:3.77, AB_AveWR:57.2", "to": "Riverwheel Sweep", "value": 1399}, {"from": "Bewildering Blizzard", "label": "3.58", "title": "combo_ct:2933, comboWR:60.28, combo+-:3.58, AB_AveWR:56.7", "to": "Fresh Start", "value": 2933}, {"from": "Bewildering Blizzard", "label": "4.24", "title": "combo_ct:2694, comboWR:60.84, combo+-:4.24, AB_AveWR:56.6", "to": "Kishla Trawlers", "value": 2694}, {"from": "Bewildering Blizzard", "label": "3.7", "title": "combo_ct:2048, comboWR:60.4, combo+-:3.7, AB_AveWR:56.7", "to": "Spectral Denial", "value": 2048}, {"from": "Bewildering Blizzard", "label": "3.6", "title": "combo_ct:3513, comboWR:58.9, combo+-:3.6, AB_AveWR:55.3", "to": "Temur Devotee", "value": 3513}, {"from": "Bewildering Blizzard", "label": "4.09", "title": "combo_ct:1083, comboWR:59.19, combo+-:4.09, AB_AveWR:55.1", "to": "Veteran Ice Climber", "value": 1083}, {"from": "Bewildering Blizzard", "label": "5.71", "title": "combo_ct:3031, comboWR:61.56, combo+-:5.71, AB_AveWR:55.85", "to": "Narset\u0027s Rebuke", "value": 3031}, {"from": "Bewildering Blizzard", "label": "3.7", "title": "combo_ct:1956, comboWR:59.0, combo+-:3.7, AB_AveWR:55.3", "to": "Stormshriek Feral", "value": 1956}, {"from": "Bewildering Blizzard", "label": "3.17", "title": "combo_ct:1552, comboWR:59.02, combo+-:3.17, AB_AveWR:55.85", "to": "Runescale Stormbrood", "value": 1552}, {"from": "Bewildering Blizzard", "label": "4.19", "title": "combo_ct:1634, comboWR:59.79, combo+-:4.19, AB_AveWR:55.6", "to": "Whirlwing Stormbrood", "value": 1634}, {"from": "Kishla Trawlers", "label": "3.62", "title": "combo_ct:2948, comboWR:60.62, combo+-:3.62, AB_AveWR:57.0", "to": "Fresh Start", "value": 2948}, {"from": "Kishla Trawlers", "label": "4.25", "title": "combo_ct:1331, comboWR:59.95, combo+-:4.25, AB_AveWR:55.7", "to": "Humbling Elder", "value": 1331}, {"from": "Kishla Trawlers", "label": "4.13", "title": "combo_ct:1045, comboWR:59.43, combo+-:4.13, AB_AveWR:55.3", "to": "Snowmelt Stag", "value": 1045}, {"from": "Kishla Trawlers", "label": "4.31", "title": "combo_ct:2130, comboWR:61.31, combo+-:4.31, AB_AveWR:57.0", "to": "Spectral Denial", "value": 2130}, {"from": "Kishla Trawlers", "label": "5.01", "title": "combo_ct:3061, comboWR:61.16, combo+-:5.01, AB_AveWR:56.15", "to": "Narset\u0027s Rebuke", "value": 3061}, {"from": "Kishla Trawlers", "label": "3.16", "title": "combo_ct:1969, comboWR:58.76, combo+-:3.16, AB_AveWR:55.6", "to": "Stormshriek Feral", "value": 1969}, {"from": "Kishla Trawlers", "label": "3.59", "title": "combo_ct:1560, comboWR:59.49, combo+-:3.59, AB_AveWR:55.9", "to": "Whirlwing Stormbrood", "value": 1560}, {"from": "Riverwheel Sweep", "label": "4.03", "title": "combo_ct:1230, comboWR:60.08, combo+-:4.03, AB_AveWR:56.05", "to": "Humbling Elder", "value": 1230}, {"from": "Riverwheel Sweep", "label": "3.66", "title": "combo_ct:3446, comboWR:60.16, combo+-:3.66, AB_AveWR:56.5", "to": "Narset\u0027s Rebuke", "value": 3446}, {"from": "Riverwheel Sweep", "label": "3.93", "title": "combo_ct:1453, comboWR:60.43, combo+-:3.93, AB_AveWR:56.5", "to": "Runescale Stormbrood", "value": 1453}, {"from": "Narset\u0027s Rebuke", "label": "3.52", "title": "combo_ct:1690, comboWR:56.92, combo+-:3.52, AB_AveWR:53.4", "to": "Highspire Bell-Ringer", "value": 1690}, {"from": "Narset\u0027s Rebuke", "label": "3.2", "title": "combo_ct:2179, comboWR:58.15, combo+-:3.2, AB_AveWR:54.95", "to": "Humbling Elder", "value": 2179}, {"from": "Narset\u0027s Rebuke", "label": "4.42", "title": "combo_ct:1567, comboWR:58.97, combo+-:4.42, AB_AveWR:54.55", "to": "Snowmelt Stag", "value": 1567}, {"from": "Narset\u0027s Rebuke", "label": "3.31", "title": "combo_ct:2161, comboWR:59.56, combo+-:3.31, AB_AveWR:56.25", "to": "Spectral Denial", "value": 2161}, {"from": "Narset\u0027s Rebuke", "label": "3.31", "title": "combo_ct:1955, comboWR:58.31, combo+-:3.31, AB_AveWR:55.0", "to": "Meticulous Artisan", "value": 1955}, {"from": "Narset\u0027s Rebuke", "label": "3.62", "title": "combo_ct:1266, comboWR:58.77, combo+-:3.62, AB_AveWR:55.15", "to": "Whirlwing Stormbrood", "value": 1266}, {"from": "Stormshriek Feral", "label": "3.15", "title": "combo_ct:1836, comboWR:58.5, combo+-:3.15, AB_AveWR:55.35", "to": "Ureni\u0027s Rebuff", "value": 1836}, {"from": "Stormshriek Feral", "label": "3.05", "title": "combo_ct:1513, comboWR:58.1, combo+-:3.05, AB_AveWR:55.05", "to": "Iridescent Tiger", "value": 1513}, {"from": "Stormshriek Feral", "label": "3.03", "title": "combo_ct:1192, comboWR:57.63, combo+-:3.03, AB_AveWR:54.6", "to": "Whirlwing Stormbrood", "value": 1192}, {"from": "Runescale Stormbrood", "label": "3.41", "title": "combo_ct:1785, comboWR:59.66, combo+-:3.41, AB_AveWR:56.25", "to": "Fresh Start", "value": 1785}, {"from": "Runescale Stormbrood", "label": "3.29", "title": "combo_ct:1347, comboWR:59.54, combo+-:3.29, AB_AveWR:56.25", "to": "Spectral Denial", "value": 1347}, {"from": "Runescale Stormbrood", "label": "3.85", "title": "combo_ct:1053, comboWR:58.4, combo+-:3.85, AB_AveWR:54.55", "to": "Overwhelming Surge", "value": 1053}, {"from": "Runescale Stormbrood", "label": "4.97", "title": "combo_ct:1028, comboWR:60.12, combo+-:4.97, AB_AveWR:55.15", "to": "Whirlwing Stormbrood", "value": 1028}, {"from": "Fresh Start", "label": "4.38", "title": "combo_ct:1070, comboWR:60.93, combo+-:4.38, AB_AveWR:56.55", "to": "Dragonstorm Forecaster", "value": 1070}, {"from": "Fresh Start", "label": "4.01", "title": "combo_ct:1813, comboWR:60.01, combo+-:4.01, AB_AveWR:56.0", "to": "Whirlwing Stormbrood", "value": 1813}, {"from": "Spectral Denial", "label": "4.0", "title": "combo_ct:1814, comboWR:60.75, combo+-:4.0, AB_AveWR:56.75", "to": "Ureni\u0027s Rebuff", "value": 1814}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

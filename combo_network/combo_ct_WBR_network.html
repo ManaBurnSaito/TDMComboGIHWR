@@ -1,0 +1,418 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Venerated Stormsinger">Venerated Stormsinger</option>
+                                
+                                    <option value="Dalkovan Packbeasts">Dalkovan Packbeasts</option>
+                                
+                                    <option value="Duty Beyond Death">Duty Beyond Death</option>
+                                
+                                    <option value="Rally the Monastery">Rally the Monastery</option>
+                                
+                                    <option value="Static Snare">Static Snare</option>
+                                
+                                    <option value="Shocking Sharpshooter">Shocking Sharpshooter</option>
+                                
+                                    <option value="War Effort">War Effort</option>
+                                
+                                    <option value="Sonic Shrieker">Sonic Shrieker</option>
+                                
+                                    <option value="Stormplain Detainment">Stormplain Detainment</option>
+                                
+                                    <option value="Descendant of Storms">Descendant of Storms</option>
+                                
+                                    <option value="Fortress Kin-Guard">Fortress Kin-Guard</option>
+                                
+                                    <option value="Mardu Devotee">Mardu Devotee</option>
+                                
+                                    <option value="Salt Road Packbeast">Salt Road Packbeast</option>
+                                
+                                    <option value="Underfoot Underdogs">Underfoot Underdogs</option>
+                                
+                                    <option value="Sunpearl Kirin">Sunpearl Kirin</option>
+                                
+                                    <option value="Equilibrium Adept">Equilibrium Adept</option>
+                                
+                                    <option value="Teeming Dragonstorm">Teeming Dragonstorm</option>
+                                
+                                    <option value="Osseous Exhale">Osseous Exhale</option>
+                                
+                                    <option value="Twinmaw Stormbrood">Twinmaw Stormbrood</option>
+                                
+                                    <option value="Jeskai Devotee">Jeskai Devotee</option>
+                                
+                                    <option value="Molten Exhale">Molten Exhale</option>
+                                
+                                    <option value="Sunset Strikemaster">Sunset Strikemaster</option>
+                                
+                                    <option value="Channeled Dragonfire">Channeled Dragonfire</option>
+                                
+                                    <option value="Fleeting Effigy">Fleeting Effigy</option>
+                                
+                                    <option value="Narset's Rebuke">Narset's Rebuke</option>
+                                
+                                    <option value="Stormshriek Feral">Stormshriek Feral</option>
+                                
+                                    <option value="Runescale Stormbrood">Runescale Stormbrood</option>
+                                
+                                    <option value="Dragon's Prey">Dragon's Prey</option>
+                                
+                                    <option value="Gurmag Rakshasa">Gurmag Rakshasa</option>
+                                
+                                    <option value="Kin-Tree Nurturer">Kin-Tree Nurturer</option>
+                                
+                                    <option value="Overwhelming Surge">Overwhelming Surge</option>
+                                
+                                    <option value="Iridescent Tiger">Iridescent Tiger</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Venerated Stormsinger", "image": "img/Venerated_Stormsinger.png", "label": "Venerated Stormsinger", "shape": "image", "title": "GIHWR:54.9, avg_pick:5.0", "url": "WBR_combo_network_Venerated_Stormsinger"}, {"color": "#97c2fc", "id": "Dalkovan Packbeasts", "image": "img/Dalkovan_Packbeasts.png", "label": "Dalkovan Packbeasts", "shape": "image", "title": "GIHWR:56.7, avg_pick:3.79", "url": "WBR_combo_network_Dalkovan_Packbeasts"}, {"color": "#97c2fc", "id": "Duty Beyond Death", "image": "img/Duty_Beyond_Death.png", "label": "Duty Beyond Death", "shape": "image", "title": "GIHWR:55.6, avg_pick:5.94", "url": "WBR_combo_network_Duty_Beyond_Death"}, {"color": "#97c2fc", "id": "Rally the Monastery", "image": "img/Rally_the_Monastery.png", "label": "Rally the Monastery", "shape": "image", "title": "GIHWR:59.0, avg_pick:3.53", "url": "WBR_combo_network_Rally_the_Monastery"}, {"color": "#97c2fc", "id": "Static Snare", "image": "img/Static_Snare.png", "label": "Static Snare", "shape": "image", "title": "GIHWR:56.2, avg_pick:3.0", "url": "WBR_combo_network_Static_Snare"}, {"color": "#97c2fc", "id": "Shocking Sharpshooter", "image": "img/Shocking_Sharpshooter.png", "label": "Shocking Sharpshooter", "shape": "image", "title": "GIHWR:57.5, avg_pick:3.86", "url": "WBR_combo_network_Shocking_Sharpshooter"}, {"color": "#97c2fc", "id": "War Effort", "image": "img/War_Effort.png", "label": "War Effort", "shape": "image", "title": "GIHWR:56.1, avg_pick:5.05", "url": "WBR_combo_network_War_Effort"}, {"color": "#97c2fc", "id": "Sonic Shrieker", "image": "img/Sonic_Shrieker.png", "label": "Sonic Shrieker", "shape": "image", "title": "GIHWR:60.7, avg_pick:3.24", "url": "WBR_combo_network_Sonic_Shrieker"}, {"color": "#97c2fc", "id": "Stormplain Detainment", "image": "img/Stormplain_Detainment.png", "label": "Stormplain Detainment", "shape": "image", "title": "GIHWR:55.2, avg_pick:4.38", "url": "WBR_combo_network_Stormplain_Detainment"}, {"color": "#97c2fc", "id": "Descendant of Storms", "image": "img/Descendant_of_Storms.png", "label": "Descendant of Storms", "shape": "image", "title": "GIHWR:58.0, avg_pick:4.04", "url": "WBR_combo_network_Descendant_of_Storms"}, {"color": "#97c2fc", "id": "Fortress Kin-Guard", "image": "img/Fortress_Kin-Guard.png", "label": "Fortress Kin-Guard", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.86", "url": "WBR_combo_network_Fortress_Kin-Guard"}, {"color": "#97c2fc", "id": "Mardu Devotee", "image": "img/Mardu_Devotee.png", "label": "Mardu Devotee", "shape": "image", "title": "GIHWR:58.1, avg_pick:6.57", "url": "WBR_combo_network_Mardu_Devotee"}, {"color": "#97c2fc", "id": "Salt Road Packbeast", "image": "img/Salt_Road_Packbeast.png", "label": "Salt Road Packbeast", "shape": "image", "title": "GIHWR:57.8, avg_pick:5.4", "url": "WBR_combo_network_Salt_Road_Packbeast"}, {"color": "#97c2fc", "id": "Underfoot Underdogs", "image": "img/Underfoot_Underdogs.png", "label": "Underfoot Underdogs", "shape": "image", "title": "GIHWR:53.4, avg_pick:10.37", "url": "WBR_combo_network_Underfoot_Underdogs"}, {"color": "#97c2fc", "id": "Sunpearl Kirin", "image": "img/Sunpearl_Kirin.png", "label": "Sunpearl Kirin", "shape": "image", "title": "GIHWR:56.7, avg_pick:3.95", "url": "WBR_combo_network_Sunpearl_Kirin"}, {"color": "#97c2fc", "id": "Equilibrium Adept", "image": "img/Equilibrium_Adept.png", "label": "Equilibrium Adept", "shape": "image", "title": "GIHWR:56.2, avg_pick:5.86", "url": "WBR_combo_network_Equilibrium_Adept"}, {"color": "#97c2fc", "id": "Teeming Dragonstorm", "image": "img/Teeming_Dragonstorm.png", "label": "Teeming Dragonstorm", "shape": "image", "title": "GIHWR:56.5, avg_pick:3.36", "url": "WBR_combo_network_Teeming_Dragonstorm"}, {"color": "#97c2fc", "id": "Osseous Exhale", "image": "img/Osseous_Exhale.png", "label": "Osseous Exhale", "shape": "image", "title": "GIHWR:54.7, avg_pick:6.01", "url": "WBR_combo_network_Osseous_Exhale"}, {"color": "#97c2fc", "id": "Twinmaw Stormbrood", "image": "img/Twinmaw_Stormbrood.png", "label": "Twinmaw Stormbrood", "shape": "image", "title": "GIHWR:58.9, avg_pick:2.15", "url": "WBR_combo_network_Twinmaw_Stormbrood"}, {"color": "#97c2fc", "id": "Jeskai Devotee", "image": "img/Jeskai_Devotee.png", "label": "Jeskai Devotee", "shape": "image", "title": "GIHWR:54.1, avg_pick:8.93", "url": "WBR_combo_network_Jeskai_Devotee"}, {"color": "#97c2fc", "id": "Molten Exhale", "image": "img/Molten_Exhale.png", "label": "Molten Exhale", "shape": "image", "title": "GIHWR:57.3, avg_pick:3.44", "url": "WBR_combo_network_Molten_Exhale"}, {"color": "#97c2fc", "id": "Sunset Strikemaster", "image": "img/Sunset_Strikemaster.png", "label": "Sunset Strikemaster", "shape": "image", "title": "GIHWR:57.4, avg_pick:3.8", "url": "WBR_combo_network_Sunset_Strikemaster"}, {"color": "#97c2fc", "id": "Channeled Dragonfire", "image": "img/Channeled_Dragonfire.png", "label": "Channeled Dragonfire", "shape": "image", "title": "GIHWR:56.8, avg_pick:5.02", "url": "WBR_combo_network_Channeled_Dragonfire"}, {"color": "#97c2fc", "id": "Fleeting Effigy", "image": "img/Fleeting_Effigy.png", "label": "Fleeting Effigy", "shape": "image", "title": "GIHWR:54.8, avg_pick:7.59", "url": "WBR_combo_network_Fleeting_Effigy"}, {"color": "#97c2fc", "id": "Narset\u0027s Rebuke", "image": "img/Narset\u0027s_Rebuke.png", "label": "Narset\u0027s Rebuke", "shape": "image", "title": "GIHWR:55.4, avg_pick:8.12", "url": "WBR_combo_network_Narset\u0027s_Rebuke"}, {"color": "#97c2fc", "id": "Stormshriek Feral", "image": "img/Stormshriek_Feral.png", "label": "Stormshriek Feral", "shape": "image", "title": "GIHWR:54.3, avg_pick:7.47", "url": "WBR_combo_network_Stormshriek_Feral"}, {"color": "#97c2fc", "id": "Runescale Stormbrood", "image": "img/Runescale_Stormbrood.png", "label": "Runescale Stormbrood", "shape": "image", "title": "GIHWR:55.4, avg_pick:4.72", "url": "WBR_combo_network_Runescale_Stormbrood"}, {"color": "#97c2fc", "id": "Dragon\u0027s Prey", "image": "img/Dragon\u0027s_Prey.png", "label": "Dragon\u0027s Prey", "shape": "image", "title": "GIHWR:55.1, avg_pick:4.25", "url": "WBR_combo_network_Dragon\u0027s_Prey"}, {"color": "#97c2fc", "id": "Gurmag Rakshasa", "image": "img/Gurmag_Rakshasa.png", "label": "Gurmag Rakshasa", "shape": "image", "title": "GIHWR:55.1, avg_pick:7.65", "url": "WBR_combo_network_Gurmag_Rakshasa"}, {"color": "#97c2fc", "id": "Kin-Tree Nurturer", "image": "img/Kin-Tree_Nurturer.png", "label": "Kin-Tree Nurturer", "shape": "image", "title": "GIHWR:54.2, avg_pick:9.82", "url": "WBR_combo_network_Kin-Tree_Nurturer"}, {"color": "#97c2fc", "id": "Overwhelming Surge", "image": "img/Overwhelming_Surge.png", "label": "Overwhelming Surge", "shape": "image", "title": "GIHWR:53.7, avg_pick:5.4", "url": "WBR_combo_network_Overwhelming_Surge"}, {"color": "#97c2fc", "id": "Iridescent Tiger", "image": "img/Iridescent_Tiger.png", "label": "Iridescent Tiger", "shape": "image", "title": "GIHWR:55.8, avg_pick:8.29", "url": "WBR_combo_network_Iridescent_Tiger"}]);
+                  edges = new vis.DataSet([{"from": "Venerated Stormsinger", "label": "4.79", "title": "combo_ct:1025, comboWR:60.59, combo+-:4.79, AB_AveWR:55.8", "to": "Dalkovan Packbeasts", "value": 1025}, {"from": "Venerated Stormsinger", "label": "3.56", "title": "combo_ct:2153, comboWR:60.06, combo+-:3.56, AB_AveWR:56.5", "to": "Mardu Devotee", "value": 2153}, {"from": "Venerated Stormsinger", "label": "3.32", "title": "combo_ct:1189, comboWR:58.12, combo+-:3.32, AB_AveWR:54.8", "to": "Osseous Exhale", "value": 1189}, {"from": "Venerated Stormsinger", "label": "3.16", "title": "combo_ct:1206, comboWR:57.71, combo+-:3.16, AB_AveWR:54.55", "to": "Kin-Tree Nurturer", "value": 1206}, {"from": "Venerated Stormsinger", "label": "3.48", "title": "combo_ct:1015, comboWR:61.28, combo+-:3.48, AB_AveWR:57.8", "to": "Sonic Shrieker", "value": 1015}, {"from": "Dalkovan Packbeasts", "label": "4.3", "title": "combo_ct:1302, comboWR:60.45, combo+-:4.3, AB_AveWR:56.15", "to": "Duty Beyond Death", "value": 1302}, {"from": "Dalkovan Packbeasts", "label": "3.1", "title": "combo_ct:1411, comboWR:60.95, combo+-:3.1, AB_AveWR:57.85", "to": "Rally the Monastery", "value": 1411}, {"from": "Dalkovan Packbeasts", "label": "3.34", "title": "combo_ct:1333, comboWR:59.79, combo+-:3.34, AB_AveWR:56.45", "to": "Static Snare", "value": 1333}, {"from": "Dalkovan Packbeasts", "label": "4.9", "title": "combo_ct:1750, comboWR:62.0, combo+-:4.9, AB_AveWR:57.1", "to": "Shocking Sharpshooter", "value": 1750}, {"from": "Dalkovan Packbeasts", "label": "4.31", "title": "combo_ct:1456, comboWR:60.71, combo+-:4.31, AB_AveWR:56.4", "to": "War Effort", "value": 1456}, {"from": "Dalkovan Packbeasts", "label": "3.98", "title": "combo_ct:1155, comboWR:62.68, combo+-:3.98, AB_AveWR:58.7", "to": "Sonic Shrieker", "value": 1155}, {"from": "Duty Beyond Death", "label": "3.87", "title": "combo_ct:3319, comboWR:60.02, combo+-:3.87, AB_AveWR:56.15", "to": "Fortress Kin-Guard", "value": 3319}, {"from": "Duty Beyond Death", "label": "5.09", "title": "combo_ct:3079, comboWR:61.94, combo+-:5.09, AB_AveWR:56.85", "to": "Mardu Devotee", "value": 3079}, {"from": "Duty Beyond Death", "label": "3.63", "title": "combo_ct:3297, comboWR:60.33, combo+-:3.63, AB_AveWR:56.7", "to": "Salt Road Packbeast", "value": 3297}, {"from": "Duty Beyond Death", "label": "3.86", "title": "combo_ct:1417, comboWR:58.36, combo+-:3.86, AB_AveWR:54.5", "to": "Underfoot Underdogs", "value": 1417}, {"from": "Rally the Monastery", "label": "3.17", "title": "combo_ct:4291, comboWR:61.57, combo+-:3.17, AB_AveWR:58.4", "to": "Salt Road Packbeast", "value": 4291}, {"from": "Rally the Monastery", "label": "3.32", "title": "combo_ct:1648, comboWR:60.92, combo+-:3.32, AB_AveWR:57.6", "to": "Static Snare", "value": 1648}, {"from": "Rally the Monastery", "label": "4.56", "title": "combo_ct:1398, comboWR:62.16, combo+-:4.56, AB_AveWR:57.6", "to": "Equilibrium Adept", "value": 1398}, {"from": "Rally the Monastery", "label": "3.28", "title": "combo_ct:2639, comboWR:59.83, combo+-:3.28, AB_AveWR:56.55", "to": "Jeskai Devotee", "value": 2639}, {"from": "Rally the Monastery", "label": "3.86", "title": "combo_ct:3285, comboWR:62.01, combo+-:3.86, AB_AveWR:58.15", "to": "Molten Exhale", "value": 3285}, {"from": "Rally the Monastery", "label": "4.57", "title": "combo_ct:1456, comboWR:62.77, combo+-:4.57, AB_AveWR:58.2", "to": "Sunset Strikemaster", "value": 1456}, {"from": "Rally the Monastery", "label": "3.16", "title": "combo_ct:1491, comboWR:59.36, combo+-:3.16, AB_AveWR:56.2", "to": "Underfoot Underdogs", "value": 1491}, {"from": "Rally the Monastery", "label": "4.22", "title": "combo_ct:1198, comboWR:61.77, combo+-:4.22, AB_AveWR:57.55", "to": "War Effort", "value": 1198}, {"from": "Rally the Monastery", "label": "3.16", "title": "combo_ct:1241, comboWR:63.01, combo+-:3.16, AB_AveWR:59.85", "to": "Sonic Shrieker", "value": 1241}, {"from": "Static Snare", "label": "3.45", "title": "combo_ct:3334, comboWR:59.9, combo+-:3.45, AB_AveWR:56.45", "to": "Fortress Kin-Guard", "value": 3334}, {"from": "Static Snare", "label": "3.24", "title": "combo_ct:3906, comboWR:60.24, combo+-:3.24, AB_AveWR:57.0", "to": "Salt Road Packbeast", "value": 3906}, {"from": "Static Snare", "label": "3.43", "title": "combo_ct:1385, comboWR:59.78, combo+-:3.43, AB_AveWR:56.35", "to": "Teeming Dragonstorm", "value": 1385}, {"from": "Static Snare", "label": "4.21", "title": "combo_ct:1240, comboWR:62.66, combo+-:4.21, AB_AveWR:58.45", "to": "Sonic Shrieker", "value": 1240}, {"from": "Shocking Sharpshooter", "label": "4.3", "title": "combo_ct:4079, comboWR:61.95, combo+-:4.3, AB_AveWR:57.65", "to": "Salt Road Packbeast", "value": 4079}, {"from": "Shocking Sharpshooter", "label": "4.46", "title": "combo_ct:1249, comboWR:60.61, combo+-:4.46, AB_AveWR:56.15", "to": "Fleeting Effigy", "value": 1249}, {"from": "War Effort", "label": "3.31", "title": "combo_ct:1370, comboWR:60.36, combo+-:3.31, AB_AveWR:57.05", "to": "Descendant of Storms", "value": 1370}, {"from": "War Effort", "label": "4.19", "title": "combo_ct:3498, comboWR:61.29, combo+-:4.19, AB_AveWR:57.1", "to": "Mardu Devotee", "value": 3498}, {"from": "War Effort", "label": "3.11", "title": "combo_ct:1294, comboWR:59.51, combo+-:3.11, AB_AveWR:56.4", "to": "Sunpearl Kirin", "value": 1294}, {"from": "Sonic Shrieker", "label": "4.87", "title": "combo_ct:3885, comboWR:64.27, combo+-:4.87, AB_AveWR:59.4", "to": "Mardu Devotee", "value": 3885}, {"from": "Sonic Shrieker", "label": "4.74", "title": "combo_ct:2380, comboWR:62.44, combo+-:4.74, AB_AveWR:57.7", "to": "Osseous Exhale", "value": 2380}, {"from": "Sonic Shrieker", "label": "3.45", "title": "combo_ct:2627, comboWR:61.4, combo+-:3.45, AB_AveWR:57.95", "to": "Stormplain Detainment", "value": 2627}, {"from": "Sonic Shrieker", "label": "4.93", "title": "combo_ct:1295, comboWR:63.63, combo+-:4.93, AB_AveWR:58.7", "to": "Sunpearl Kirin", "value": 1295}, {"from": "Sonic Shrieker", "label": "3.43", "title": "combo_ct:1583, comboWR:62.03, combo+-:3.43, AB_AveWR:58.6", "to": "Teeming Dragonstorm", "value": 1583}, {"from": "Sonic Shrieker", "label": "3.57", "title": "combo_ct:2201, comboWR:61.47, combo+-:3.57, AB_AveWR:57.9", "to": "Dragon\u0027s Prey", "value": 2201}, {"from": "Sonic Shrieker", "label": "3.23", "title": "combo_ct:1035, comboWR:60.68, combo+-:3.23, AB_AveWR:57.45", "to": "Kin-Tree Nurturer", "value": 1035}, {"from": "Sonic Shrieker", "label": "4.56", "title": "combo_ct:3444, comboWR:63.56, combo+-:4.56, AB_AveWR:59.0", "to": "Molten Exhale", "value": 3444}, {"from": "Sonic Shrieker", "label": "3.39", "title": "combo_ct:1310, comboWR:62.44, combo+-:3.39, AB_AveWR:59.05", "to": "Sunset Strikemaster", "value": 1310}, {"from": "Sonic Shrieker", "label": "4.5", "title": "combo_ct:1605, comboWR:64.3, combo+-:4.5, AB_AveWR:59.8", "to": "Twinmaw Stormbrood", "value": 1605}, {"from": "Stormplain Detainment", "label": "3.15", "title": "combo_ct:3061, comboWR:59.75, combo+-:3.15, AB_AveWR:56.6", "to": "Descendant of Storms", "value": 3061}, {"from": "Stormplain Detainment", "label": "3.69", "title": "combo_ct:3102, comboWR:59.54, combo+-:3.69, AB_AveWR:55.85", "to": "Teeming Dragonstorm", "value": 3102}, {"from": "Fortress Kin-Guard", "label": "3.31", "title": "combo_ct:10941, comboWR:60.56, combo+-:3.31, AB_AveWR:57.25", "to": "Salt Road Packbeast", "value": 10941}, {"from": "Mardu Devotee", "label": "3.17", "title": "combo_ct:3809, comboWR:60.57, combo+-:3.17, AB_AveWR:57.4", "to": "Sunpearl Kirin", "value": 3809}, {"from": "Mardu Devotee", "label": "3.05", "title": "combo_ct:2314, comboWR:60.2, combo+-:3.05, AB_AveWR:57.15", "to": "Equilibrium Adept", "value": 2314}, {"from": "Salt Road Packbeast", "label": "3.13", "title": "combo_ct:1856, comboWR:59.43, combo+-:3.13, AB_AveWR:56.3", "to": "Fleeting Effigy", "value": 1856}, {"from": "Equilibrium Adept", "label": "3.24", "title": "combo_ct:1767, comboWR:58.69, combo+-:3.24, AB_AveWR:55.45", "to": "Osseous Exhale", "value": 1767}, {"from": "Equilibrium Adept", "label": "3.09", "title": "combo_ct:1574, comboWR:59.59, combo+-:3.09, AB_AveWR:56.5", "to": "Channeled Dragonfire", "value": 1574}, {"from": "Equilibrium Adept", "label": "3.9", "title": "combo_ct:4645, comboWR:60.65, combo+-:3.9, AB_AveWR:56.75", "to": "Molten Exhale", "value": 4645}, {"from": "Equilibrium Adept", "label": "3.22", "title": "combo_ct:1095, comboWR:58.17, combo+-:3.22, AB_AveWR:54.95", "to": "Overwhelming Surge", "value": 1095}, {"from": "Equilibrium Adept", "label": "4.5", "title": "combo_ct:2155, comboWR:61.3, combo+-:4.5, AB_AveWR:56.8", "to": "Sunset Strikemaster", "value": 2155}, {"from": "Teeming Dragonstorm", "label": "4.32", "title": "combo_ct:2782, comboWR:59.92, combo+-:4.32, AB_AveWR:55.6", "to": "Osseous Exhale", "value": 2782}, {"from": "Teeming Dragonstorm", "label": "3.68", "title": "combo_ct:3090, comboWR:60.58, combo+-:3.68, AB_AveWR:56.9", "to": "Molten Exhale", "value": 3090}, {"from": "Teeming Dragonstorm", "label": "3.46", "title": "combo_ct:2035, comboWR:59.41, combo+-:3.46, AB_AveWR:55.95", "to": "Narset\u0027s Rebuke", "value": 2035}, {"from": "Teeming Dragonstorm", "label": "3.68", "title": "combo_ct:2571, comboWR:59.08, combo+-:3.68, AB_AveWR:55.4", "to": "Stormshriek Feral", "value": 2571}, {"from": "Teeming Dragonstorm", "label": "4.37", "title": "combo_ct:1197, comboWR:61.32, combo+-:4.37, AB_AveWR:56.95", "to": "Sunset Strikemaster", "value": 1197}, {"from": "Teeming Dragonstorm", "label": "5.72", "title": "combo_ct:1067, comboWR:61.67, combo+-:5.72, AB_AveWR:55.95", "to": "Runescale Stormbrood", "value": 1067}, {"from": "Teeming Dragonstorm", "label": "4.14", "title": "combo_ct:1824, comboWR:61.84, combo+-:4.14, AB_AveWR:57.7", "to": "Twinmaw Stormbrood", "value": 1824}, {"from": "Osseous Exhale", "label": "3.1", "title": "combo_ct:2890, comboWR:59.9, combo+-:3.1, AB_AveWR:56.8", "to": "Twinmaw Stormbrood", "value": 2890}, {"from": "Twinmaw Stormbrood", "label": "3.09", "title": "combo_ct:3009, comboWR:59.59, combo+-:3.09, AB_AveWR:56.5", "to": "Jeskai Devotee", "value": 3009}, {"from": "Twinmaw Stormbrood", "label": "4.21", "title": "combo_ct:4691, comboWR:62.31, combo+-:4.21, AB_AveWR:58.1", "to": "Molten Exhale", "value": 4691}, {"from": "Twinmaw Stormbrood", "label": "3.34", "title": "combo_ct:3217, comboWR:60.49, combo+-:3.34, AB_AveWR:57.15", "to": "Narset\u0027s Rebuke", "value": 3217}, {"from": "Twinmaw Stormbrood", "label": "3.38", "title": "combo_ct:1825, comboWR:61.53, combo+-:3.38, AB_AveWR:58.15", "to": "Sunset Strikemaster", "value": 1825}, {"from": "Twinmaw Stormbrood", "label": "3.33", "title": "combo_ct:1412, comboWR:60.48, combo+-:3.33, AB_AveWR:57.15", "to": "Runescale Stormbrood", "value": 1412}, {"from": "Molten Exhale", "label": "3.65", "title": "combo_ct:4302, comboWR:60.0, combo+-:3.65, AB_AveWR:56.35", "to": "Runescale Stormbrood", "value": 4302}, {"from": "Sunset Strikemaster", "label": "3.36", "title": "combo_ct:1069, comboWR:59.96, combo+-:3.36, AB_AveWR:56.6", "to": "Iridescent Tiger", "value": 1069}, {"from": "Sunset Strikemaster", "label": "3.18", "title": "combo_ct:3491, comboWR:59.58, combo+-:3.18, AB_AveWR:56.4", "to": "Narset\u0027s Rebuke", "value": 3491}, {"from": "Stormshriek Feral", "label": "3.05", "title": "combo_ct:1513, comboWR:58.1, combo+-:3.05, AB_AveWR:55.05", "to": "Iridescent Tiger", "value": 1513}, {"from": "Runescale Stormbrood", "label": "3.85", "title": "combo_ct:1053, comboWR:58.4, combo+-:3.85, AB_AveWR:54.55", "to": "Overwhelming Surge", "value": 1053}, {"from": "Dragon\u0027s Prey", "label": "3.61", "title": "combo_ct:1918, comboWR:58.71, combo+-:3.61, AB_AveWR:55.1", "to": "Gurmag Rakshasa", "value": 1918}, {"from": "Gurmag Rakshasa", "label": "3.12", "title": "combo_ct:1146, comboWR:57.77, combo+-:3.12, AB_AveWR:54.65", "to": "Kin-Tree Nurturer", "value": 1146}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

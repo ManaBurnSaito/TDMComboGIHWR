@@ -1,0 +1,422 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Dalkovan Packbeasts">Dalkovan Packbeasts</option>
+                                
+                                    <option value="Duty Beyond Death">Duty Beyond Death</option>
+                                
+                                    <option value="Rally the Monastery">Rally the Monastery</option>
+                                
+                                    <option value="Static Snare">Static Snare</option>
+                                
+                                    <option value="Stormplain Detainment">Stormplain Detainment</option>
+                                
+                                    <option value="Fortress Kin-Guard">Fortress Kin-Guard</option>
+                                
+                                    <option value="Mardu Devotee">Mardu Devotee</option>
+                                
+                                    <option value="Salt Road Packbeast">Salt Road Packbeast</option>
+                                
+                                    <option value="Teeming Dragonstorm">Teeming Dragonstorm</option>
+                                
+                                    <option value="Osseous Exhale">Osseous Exhale</option>
+                                
+                                    <option value="Ainok Wayfarer">Ainok Wayfarer</option>
+                                
+                                    <option value="Disruptive Stormbrood">Disruptive Stormbrood</option>
+                                
+                                    <option value="Twinmaw Stormbrood">Twinmaw Stormbrood</option>
+                                
+                                    <option value="Dragonbroods' Relic">Dragonbroods' Relic</option>
+                                
+                                    <option value="Inspirited Vanguard">Inspirited Vanguard</option>
+                                
+                                    <option value="Knockout Maneuver">Knockout Maneuver</option>
+                                
+                                    <option value="Rite of Renewal">Rite of Renewal</option>
+                                
+                                    <option value="Sarkhan's Resolve">Sarkhan's Resolve</option>
+                                
+                                    <option value="Dusyut Earthcarver">Dusyut Earthcarver</option>
+                                
+                                    <option value="Attuned Hunter">Attuned Hunter</option>
+                                
+                                    <option value="Snakeskin Veil">Snakeskin Veil</option>
+                                
+                                    <option value="Dragon Sniper">Dragon Sniper</option>
+                                
+                                    <option value="Champion of Dusan">Champion of Dusan</option>
+                                
+                                    <option value="Piercing Exhale">Piercing Exhale</option>
+                                
+                                    <option value="Traveling Botanist">Traveling Botanist</option>
+                                
+                                    <option value="Encroaching Dragonstorm">Encroaching Dragonstorm</option>
+                                
+                                    <option value="Roamer's Routine">Roamer's Routine</option>
+                                
+                                    <option value="Sagu Pummeler">Sagu Pummeler</option>
+                                
+                                    <option value="Sagu Wildling">Sagu Wildling</option>
+                                
+                                    <option value="Sultai Devotee">Sultai Devotee</option>
+                                
+                                    <option value="Undergrowth Leopard">Undergrowth Leopard</option>
+                                
+                                    <option value="Formation Breaker">Formation Breaker</option>
+                                
+                                    <option value="Synchronized Charge">Synchronized Charge</option>
+                                
+                                    <option value="Sage of the Fang">Sage of the Fang</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Dalkovan Packbeasts", "image": "img/Dalkovan_Packbeasts.png", "label": "Dalkovan Packbeasts", "shape": "image", "title": "GIHWR:56.7, avg_pick:3.79", "url": "WG_combo_network_Dalkovan_Packbeasts"}, {"color": "#97c2fc", "id": "Duty Beyond Death", "image": "img/Duty_Beyond_Death.png", "label": "Duty Beyond Death", "shape": "image", "title": "GIHWR:55.6, avg_pick:5.94", "url": "WG_combo_network_Duty_Beyond_Death"}, {"color": "#97c2fc", "id": "Rally the Monastery", "image": "img/Rally_the_Monastery.png", "label": "Rally the Monastery", "shape": "image", "title": "GIHWR:59.0, avg_pick:3.53", "url": "WG_combo_network_Rally_the_Monastery"}, {"color": "#97c2fc", "id": "Static Snare", "image": "img/Static_Snare.png", "label": "Static Snare", "shape": "image", "title": "GIHWR:56.2, avg_pick:3.0", "url": "WG_combo_network_Static_Snare"}, {"color": "#97c2fc", "id": "Stormplain Detainment", "image": "img/Stormplain_Detainment.png", "label": "Stormplain Detainment", "shape": "image", "title": "GIHWR:55.2, avg_pick:4.38", "url": "WG_combo_network_Stormplain_Detainment"}, {"color": "#97c2fc", "id": "Fortress Kin-Guard", "image": "img/Fortress_Kin-Guard.png", "label": "Fortress Kin-Guard", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.86", "url": "WG_combo_network_Fortress_Kin-Guard"}, {"color": "#97c2fc", "id": "Mardu Devotee", "image": "img/Mardu_Devotee.png", "label": "Mardu Devotee", "shape": "image", "title": "GIHWR:58.1, avg_pick:6.57", "url": "WG_combo_network_Mardu_Devotee"}, {"color": "#97c2fc", "id": "Salt Road Packbeast", "image": "img/Salt_Road_Packbeast.png", "label": "Salt Road Packbeast", "shape": "image", "title": "GIHWR:57.8, avg_pick:5.4", "url": "WG_combo_network_Salt_Road_Packbeast"}, {"color": "#97c2fc", "id": "Teeming Dragonstorm", "image": "img/Teeming_Dragonstorm.png", "label": "Teeming Dragonstorm", "shape": "image", "title": "GIHWR:56.5, avg_pick:3.36", "url": "WG_combo_network_Teeming_Dragonstorm"}, {"color": "#97c2fc", "id": "Osseous Exhale", "image": "img/Osseous_Exhale.png", "label": "Osseous Exhale", "shape": "image", "title": "GIHWR:54.7, avg_pick:6.01", "url": "WG_combo_network_Osseous_Exhale"}, {"color": "#97c2fc", "id": "Ainok Wayfarer", "image": "img/Ainok_Wayfarer.png", "label": "Ainok Wayfarer", "shape": "image", "title": "GIHWR:57.0, avg_pick:6.89", "url": "WG_combo_network_Ainok_Wayfarer"}, {"color": "#97c2fc", "id": "Disruptive Stormbrood", "image": "img/Disruptive_Stormbrood.png", "label": "Disruptive Stormbrood", "shape": "image", "title": "GIHWR:58.2, avg_pick:2.67", "url": "WG_combo_network_Disruptive_Stormbrood"}, {"color": "#97c2fc", "id": "Twinmaw Stormbrood", "image": "img/Twinmaw_Stormbrood.png", "label": "Twinmaw Stormbrood", "shape": "image", "title": "GIHWR:58.9, avg_pick:2.15", "url": "WG_combo_network_Twinmaw_Stormbrood"}, {"color": "#97c2fc", "id": "Dragonbroods\u0027 Relic", "image": "img/Dragonbroods\u0027_Relic.png", "label": "Dragonbroods\u0027 Relic", "shape": "image", "title": "GIHWR:57.5, avg_pick:5.74", "url": "WG_combo_network_Dragonbroods\u0027_Relic"}, {"color": "#97c2fc", "id": "Inspirited Vanguard", "image": "img/Inspirited_Vanguard.png", "label": "Inspirited Vanguard", "shape": "image", "title": "GIHWR:55.0, avg_pick:5.34", "url": "WG_combo_network_Inspirited_Vanguard"}, {"color": "#97c2fc", "id": "Knockout Maneuver", "image": "img/Knockout_Maneuver.png", "label": "Knockout Maneuver", "shape": "image", "title": "GIHWR:58.5, avg_pick:3.75", "url": "WG_combo_network_Knockout_Maneuver"}, {"color": "#97c2fc", "id": "Rite of Renewal", "image": "img/Rite_of_Renewal.png", "label": "Rite of Renewal", "shape": "image", "title": "GIHWR:53.0, avg_pick:10.01", "url": "WG_combo_network_Rite_of_Renewal"}, {"color": "#97c2fc", "id": "Sarkhan\u0027s Resolve", "image": "img/Sarkhan\u0027s_Resolve.png", "label": "Sarkhan\u0027s Resolve", "shape": "image", "title": "GIHWR:55.7, avg_pick:9.49", "url": "WG_combo_network_Sarkhan\u0027s_Resolve"}, {"color": "#97c2fc", "id": "Dusyut Earthcarver", "image": "img/Dusyut_Earthcarver.png", "label": "Dusyut Earthcarver", "shape": "image", "title": "GIHWR:55.2, avg_pick:10.08", "url": "WG_combo_network_Dusyut_Earthcarver"}, {"color": "#97c2fc", "id": "Attuned Hunter", "image": "img/Attuned_Hunter.png", "label": "Attuned Hunter", "shape": "image", "title": "GIHWR:53.1, avg_pick:6.37", "url": "WG_combo_network_Attuned_Hunter"}, {"color": "#97c2fc", "id": "Snakeskin Veil", "image": "img/Snakeskin_Veil.png", "label": "Snakeskin Veil", "shape": "image", "title": "GIHWR:56.0, avg_pick:8.71", "url": "WG_combo_network_Snakeskin_Veil"}, {"color": "#97c2fc", "id": "Dragon Sniper", "image": "img/Dragon_Sniper.png", "label": "Dragon Sniper", "shape": "image", "title": "GIHWR:57.5, avg_pick:4.32", "url": "WG_combo_network_Dragon_Sniper"}, {"color": "#97c2fc", "id": "Champion of Dusan", "image": "img/Champion_of_Dusan.png", "label": "Champion of Dusan", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.94", "url": "WG_combo_network_Champion_of_Dusan"}, {"color": "#97c2fc", "id": "Piercing Exhale", "image": "img/Piercing_Exhale.png", "label": "Piercing Exhale", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.37", "url": "WG_combo_network_Piercing_Exhale"}, {"color": "#97c2fc", "id": "Traveling Botanist", "image": "img/Traveling_Botanist.png", "label": "Traveling Botanist", "shape": "image", "title": "GIHWR:58.9, avg_pick:3.13", "url": "WG_combo_network_Traveling_Botanist"}, {"color": "#97c2fc", "id": "Encroaching Dragonstorm", "image": "img/Encroaching_Dragonstorm.png", "label": "Encroaching Dragonstorm", "shape": "image", "title": "GIHWR:53.8, avg_pick:5.88", "url": "WG_combo_network_Encroaching_Dragonstorm"}, {"color": "#97c2fc", "id": "Roamer\u0027s Routine", "image": "img/Roamer\u0027s_Routine.png", "label": "Roamer\u0027s Routine", "shape": "image", "title": "GIHWR:51.8, avg_pick:9.7", "url": "WG_combo_network_Roamer\u0027s_Routine"}, {"color": "#97c2fc", "id": "Sagu Pummeler", "image": "img/Sagu_Pummeler.png", "label": "Sagu Pummeler", "shape": "image", "title": "GIHWR:55.0, avg_pick:7.47", "url": "WG_combo_network_Sagu_Pummeler"}, {"color": "#97c2fc", "id": "Sagu Wildling", "image": "img/Sagu_Wildling.png", "label": "Sagu Wildling", "shape": "image", "title": "GIHWR:56.4, avg_pick:4.38", "url": "WG_combo_network_Sagu_Wildling"}, {"color": "#97c2fc", "id": "Sultai Devotee", "image": "img/Sultai_Devotee.png", "label": "Sultai Devotee", "shape": "image", "title": "GIHWR:55.2, avg_pick:7.26", "url": "WG_combo_network_Sultai_Devotee"}, {"color": "#97c2fc", "id": "Undergrowth Leopard", "image": "img/Undergrowth_Leopard.png", "label": "Undergrowth Leopard", "shape": "image", "title": "GIHWR:54.0, avg_pick:9.57", "url": "WG_combo_network_Undergrowth_Leopard"}, {"color": "#97c2fc", "id": "Formation Breaker", "image": "img/Formation_Breaker.png", "label": "Formation Breaker", "shape": "image", "title": "GIHWR:54.6, avg_pick:6.13", "url": "WG_combo_network_Formation_Breaker"}, {"color": "#97c2fc", "id": "Synchronized Charge", "image": "img/Synchronized_Charge.png", "label": "Synchronized Charge", "shape": "image", "title": "GIHWR:56.6, avg_pick:6.34", "url": "WG_combo_network_Synchronized_Charge"}, {"color": "#97c2fc", "id": "Sage of the Fang", "image": "img/Sage_of_the_Fang.png", "label": "Sage of the Fang", "shape": "image", "title": "GIHWR:54.4, avg_pick:4.9", "url": "WG_combo_network_Sage_of_the_Fang"}]);
+                  edges = new vis.DataSet([{"from": "Dalkovan Packbeasts", "label": "4.3", "title": "combo_ct:1302, comboWR:60.45, combo+-:4.3, AB_AveWR:56.15", "to": "Duty Beyond Death", "value": 4.3}, {"from": "Dalkovan Packbeasts", "label": "3.1", "title": "combo_ct:1411, comboWR:60.95, combo+-:3.1, AB_AveWR:57.85", "to": "Rally the Monastery", "value": 3.1}, {"from": "Dalkovan Packbeasts", "label": "3.34", "title": "combo_ct:1333, comboWR:59.79, combo+-:3.34, AB_AveWR:56.45", "to": "Static Snare", "value": 3.34}, {"from": "Duty Beyond Death", "label": "3.87", "title": "combo_ct:3319, comboWR:60.02, combo+-:3.87, AB_AveWR:56.15", "to": "Fortress Kin-Guard", "value": 3.87}, {"from": "Duty Beyond Death", "label": "5.09", "title": "combo_ct:3079, comboWR:61.94, combo+-:5.09, AB_AveWR:56.85", "to": "Mardu Devotee", "value": 5.09}, {"from": "Duty Beyond Death", "label": "3.63", "title": "combo_ct:3297, comboWR:60.33, combo+-:3.63, AB_AveWR:56.7", "to": "Salt Road Packbeast", "value": 3.63}, {"from": "Rally the Monastery", "label": "3.17", "title": "combo_ct:4291, comboWR:61.57, combo+-:3.17, AB_AveWR:58.4", "to": "Salt Road Packbeast", "value": 3.17}, {"from": "Rally the Monastery", "label": "3.32", "title": "combo_ct:1648, comboWR:60.92, combo+-:3.32, AB_AveWR:57.6", "to": "Static Snare", "value": 3.32}, {"from": "Static Snare", "label": "3.45", "title": "combo_ct:3334, comboWR:59.9, combo+-:3.45, AB_AveWR:56.45", "to": "Fortress Kin-Guard", "value": 3.45}, {"from": "Static Snare", "label": "3.24", "title": "combo_ct:3906, comboWR:60.24, combo+-:3.24, AB_AveWR:57.0", "to": "Salt Road Packbeast", "value": 3.24}, {"from": "Static Snare", "label": "3.43", "title": "combo_ct:1385, comboWR:59.78, combo+-:3.43, AB_AveWR:56.35", "to": "Teeming Dragonstorm", "value": 3.43}, {"from": "Stormplain Detainment", "label": "3.69", "title": "combo_ct:3102, comboWR:59.54, combo+-:3.69, AB_AveWR:55.85", "to": "Teeming Dragonstorm", "value": 3.69}, {"from": "Fortress Kin-Guard", "label": "3.31", "title": "combo_ct:10941, comboWR:60.56, combo+-:3.31, AB_AveWR:57.25", "to": "Salt Road Packbeast", "value": 3.31}, {"from": "Teeming Dragonstorm", "label": "4.32", "title": "combo_ct:2782, comboWR:59.92, combo+-:4.32, AB_AveWR:55.6", "to": "Osseous Exhale", "value": 4.32}, {"from": "Teeming Dragonstorm", "label": "4.14", "title": "combo_ct:1824, comboWR:61.84, combo+-:4.14, AB_AveWR:57.7", "to": "Twinmaw Stormbrood", "value": 4.14}, {"from": "Osseous Exhale", "label": "3.45", "title": "combo_ct:1425, comboWR:59.3, combo+-:3.45, AB_AveWR:55.85", "to": "Ainok Wayfarer", "value": 3.45}, {"from": "Osseous Exhale", "label": "3.22", "title": "combo_ct:1101, comboWR:59.67, combo+-:3.22, AB_AveWR:56.45", "to": "Disruptive Stormbrood", "value": 3.22}, {"from": "Osseous Exhale", "label": "3.1", "title": "combo_ct:2890, comboWR:59.9, combo+-:3.1, AB_AveWR:56.8", "to": "Twinmaw Stormbrood", "value": 3.1}, {"from": "Ainok Wayfarer", "label": "5.04", "title": "combo_ct:4336, comboWR:62.29, combo+-:5.04, AB_AveWR:57.25", "to": "Dragonbroods\u0027 Relic", "value": 5.04}, {"from": "Ainok Wayfarer", "label": "3.3", "title": "combo_ct:3020, comboWR:59.3, combo+-:3.3, AB_AveWR:56.0", "to": "Inspirited Vanguard", "value": 3.3}, {"from": "Ainok Wayfarer", "label": "3.74", "title": "combo_ct:5246, comboWR:61.49, combo+-:3.74, AB_AveWR:57.75", "to": "Knockout Maneuver", "value": 3.74}, {"from": "Ainok Wayfarer", "label": "6.13", "title": "combo_ct:1428, comboWR:61.13, combo+-:6.13, AB_AveWR:55.0", "to": "Rite of Renewal", "value": 6.13}, {"from": "Ainok Wayfarer", "label": "3.15", "title": "combo_ct:5546, comboWR:59.5, combo+-:3.15, AB_AveWR:56.35", "to": "Sarkhan\u0027s Resolve", "value": 3.15}, {"from": "Ainok Wayfarer", "label": "4.26", "title": "combo_ct:4625, comboWR:61.86, combo+-:4.26, AB_AveWR:57.6", "to": "Disruptive Stormbrood", "value": 4.26}, {"from": "Disruptive Stormbrood", "label": "3.26", "title": "combo_ct:1759, comboWR:61.11, combo+-:3.26, AB_AveWR:57.85", "to": "Dragon Sniper", "value": 3.26}, {"from": "Disruptive Stormbrood", "label": "4.66", "title": "combo_ct:1835, comboWR:62.51, combo+-:4.66, AB_AveWR:57.85", "to": "Dragonbroods\u0027 Relic", "value": 4.66}, {"from": "Disruptive Stormbrood", "label": "3.66", "title": "combo_ct:1092, comboWR:60.26, combo+-:3.66, AB_AveWR:56.6", "to": "Inspirited Vanguard", "value": 3.66}, {"from": "Disruptive Stormbrood", "label": "3.44", "title": "combo_ct:4285, comboWR:61.14, combo+-:3.44, AB_AveWR:57.7", "to": "Piercing Exhale", "value": 3.44}, {"from": "Disruptive Stormbrood", "label": "3.8", "title": "combo_ct:3465, comboWR:60.4, combo+-:3.8, AB_AveWR:56.6", "to": "Sagu Pummeler", "value": 3.8}, {"from": "Disruptive Stormbrood", "label": "4.26", "title": "combo_ct:4563, comboWR:61.56, combo+-:4.26, AB_AveWR:57.3", "to": "Sagu Wildling", "value": 4.26}, {"from": "Disruptive Stormbrood", "label": "3.39", "title": "combo_ct:2597, comboWR:60.49, combo+-:3.39, AB_AveWR:57.1", "to": "Snakeskin Veil", "value": 3.39}, {"from": "Disruptive Stormbrood", "label": "3.07", "title": "combo_ct:4106, comboWR:59.77, combo+-:3.07, AB_AveWR:56.7", "to": "Sultai Devotee", "value": 3.07}, {"from": "Twinmaw Stormbrood", "label": "4.01", "title": "combo_ct:1122, comboWR:62.21, combo+-:4.01, AB_AveWR:58.2", "to": "Dragonbroods\u0027 Relic", "value": 4.01}, {"from": "Twinmaw Stormbrood", "label": "3.63", "title": "combo_ct:1472, comboWR:61.68, combo+-:3.63, AB_AveWR:58.05", "to": "Piercing Exhale", "value": 3.63}, {"from": "Dragonbroods\u0027 Relic", "label": "4.08", "title": "combo_ct:2100, comboWR:60.48, combo+-:4.08, AB_AveWR:56.4", "to": "Champion of Dusan", "value": 4.08}, {"from": "Dragonbroods\u0027 Relic", "label": "6.23", "title": "combo_ct:1712, comboWR:63.73, combo+-:6.23, AB_AveWR:57.5", "to": "Dragon Sniper", "value": 6.23}, {"from": "Dragonbroods\u0027 Relic", "label": "6.45", "title": "combo_ct:1483, comboWR:62.1, combo+-:6.45, AB_AveWR:55.65", "to": "Encroaching Dragonstorm", "value": 6.45}, {"from": "Dragonbroods\u0027 Relic", "label": "5.3", "title": "combo_ct:3714, comboWR:62.65, combo+-:5.3, AB_AveWR:57.35", "to": "Piercing Exhale", "value": 5.3}, {"from": "Dragonbroods\u0027 Relic", "label": "3.81", "title": "combo_ct:1601, comboWR:58.46, combo+-:3.81, AB_AveWR:54.65", "to": "Roamer\u0027s Routine", "value": 3.81}, {"from": "Dragonbroods\u0027 Relic", "label": "3.87", "title": "combo_ct:2595, comboWR:60.12, combo+-:3.87, AB_AveWR:56.25", "to": "Sagu Pummeler", "value": 3.87}, {"from": "Dragonbroods\u0027 Relic", "label": "4.14", "title": "combo_ct:4929, comboWR:61.09, combo+-:4.14, AB_AveWR:56.95", "to": "Sagu Wildling", "value": 4.14}, {"from": "Dragonbroods\u0027 Relic", "label": "3.41", "title": "combo_ct:1777, comboWR:60.16, combo+-:3.41, AB_AveWR:56.75", "to": "Snakeskin Veil", "value": 3.41}, {"from": "Dragonbroods\u0027 Relic", "label": "4.09", "title": "combo_ct:3445, comboWR:60.44, combo+-:4.09, AB_AveWR:56.35", "to": "Sultai Devotee", "value": 4.09}, {"from": "Dragonbroods\u0027 Relic", "label": "5.61", "title": "combo_ct:2075, comboWR:63.81, combo+-:5.61, AB_AveWR:58.2", "to": "Traveling Botanist", "value": 5.61}, {"from": "Dragonbroods\u0027 Relic", "label": "3.23", "title": "combo_ct:1682, comboWR:58.98, combo+-:3.23, AB_AveWR:55.75", "to": "Undergrowth Leopard", "value": 3.23}, {"from": "Inspirited Vanguard", "label": "3.01", "title": "combo_ct:2347, comboWR:58.16, combo+-:3.01, AB_AveWR:55.15", "to": "Champion of Dusan", "value": 3.01}, {"from": "Inspirited Vanguard", "label": "3.4", "title": "combo_ct:1503, comboWR:58.75, combo+-:3.4, AB_AveWR:55.35", "to": "Sarkhan\u0027s Resolve", "value": 3.4}, {"from": "Inspirited Vanguard", "label": "3.12", "title": "combo_ct:2037, comboWR:58.62, combo+-:3.12, AB_AveWR:55.5", "to": "Snakeskin Veil", "value": 3.12}, {"from": "Knockout Maneuver", "label": "3.57", "title": "combo_ct:3792, comboWR:60.47, combo+-:3.57, AB_AveWR:56.9", "to": "Champion of Dusan", "value": 3.57}, {"from": "Knockout Maneuver", "label": "3.58", "title": "combo_ct:2150, comboWR:61.58, combo+-:3.58, AB_AveWR:58.0", "to": "Dragon Sniper", "value": 3.58}, {"from": "Knockout Maneuver", "label": "4.04", "title": "combo_ct:1355, comboWR:60.59, combo+-:4.04, AB_AveWR:56.55", "to": "Formation Breaker", "value": 4.04}, {"from": "Knockout Maneuver", "label": "3.62", "title": "combo_ct:4845, comboWR:61.47, combo+-:3.62, AB_AveWR:57.85", "to": "Piercing Exhale", "value": 3.62}, {"from": "Knockout Maneuver", "label": "4.72", "title": "combo_ct:1442, comboWR:61.17, combo+-:4.72, AB_AveWR:56.45", "to": "Sage of the Fang", "value": 4.72}, {"from": "Knockout Maneuver", "label": "3.1", "title": "combo_ct:4007, comboWR:59.85, combo+-:3.1, AB_AveWR:56.75", "to": "Sagu Pummeler", "value": 3.1}, {"from": "Knockout Maneuver", "label": "3.05", "title": "combo_ct:4559, comboWR:60.5, combo+-:3.05, AB_AveWR:57.45", "to": "Sagu Wildling", "value": 3.05}, {"from": "Knockout Maneuver", "label": "3.49", "title": "combo_ct:1150, comboWR:61.04, combo+-:3.49, AB_AveWR:57.55", "to": "Synchronized Charge", "value": 3.49}, {"from": "Knockout Maneuver", "label": "5.68", "title": "combo_ct:2597, comboWR:64.38, combo+-:5.68, AB_AveWR:58.7", "to": "Traveling Botanist", "value": 5.68}, {"from": "Rite of Renewal", "label": "4.99", "title": "combo_ct:1115, comboWR:60.09, combo+-:4.99, AB_AveWR:55.1", "to": "Piercing Exhale", "value": 4.99}, {"from": "Sarkhan\u0027s Resolve", "label": "3.29", "title": "combo_ct:1411, comboWR:57.69, combo+-:3.29, AB_AveWR:54.4", "to": "Attuned Hunter", "value": 3.29}, {"from": "Sarkhan\u0027s Resolve", "label": "4.22", "title": "combo_ct:2241, comboWR:60.82, combo+-:4.22, AB_AveWR:56.6", "to": "Dragon Sniper", "value": 4.22}, {"from": "Sarkhan\u0027s Resolve", "label": "3.45", "title": "combo_ct:2567, comboWR:58.9, combo+-:3.45, AB_AveWR:55.45", "to": "Dusyut Earthcarver", "value": 3.45}, {"from": "Sarkhan\u0027s Resolve", "label": "3.36", "title": "combo_ct:1551, comboWR:58.41, combo+-:3.36, AB_AveWR:55.05", "to": "Sage of the Fang", "value": 3.36}, {"from": "Sarkhan\u0027s Resolve", "label": "4.43", "title": "combo_ct:2592, comboWR:61.73, combo+-:4.43, AB_AveWR:57.3", "to": "Traveling Botanist", "value": 4.43}, {"from": "Dusyut Earthcarver", "label": "3.71", "title": "combo_ct:1234, comboWR:57.86, combo+-:3.71, AB_AveWR:54.15", "to": "Attuned Hunter", "value": 3.71}, {"from": "Dusyut Earthcarver", "label": "3.38", "title": "combo_ct:2168, comboWR:59.73, combo+-:3.38, AB_AveWR:56.35", "to": "Dragon Sniper", "value": 3.38}, {"from": "Dusyut Earthcarver", "label": "3.23", "title": "combo_ct:5398, comboWR:59.43, combo+-:3.23, AB_AveWR:56.2", "to": "Piercing Exhale", "value": 3.23}, {"from": "Dusyut Earthcarver", "label": "3.72", "title": "combo_ct:4689, comboWR:59.52, combo+-:3.72, AB_AveWR:55.8", "to": "Sagu Wildling", "value": 3.72}, {"from": "Attuned Hunter", "label": "3.2", "title": "combo_ct:1851, comboWR:57.75, combo+-:3.2, AB_AveWR:54.55", "to": "Snakeskin Veil", "value": 3.2}, {"from": "Snakeskin Veil", "label": "4.39", "title": "combo_ct:1152, comboWR:59.29, combo+-:4.39, AB_AveWR:54.9", "to": "Encroaching Dragonstorm", "value": 4.39}, {"from": "Snakeskin Veil", "label": "3.14", "title": "combo_ct:2271, comboWR:58.34, combo+-:3.14, AB_AveWR:55.2", "to": "Sage of the Fang", "value": 3.14}, {"from": "Snakeskin Veil", "label": "3.1", "title": "combo_ct:1921, comboWR:59.4, combo+-:3.1, AB_AveWR:56.3", "to": "Synchronized Charge", "value": 3.1}, {"from": "Snakeskin Veil", "label": "3.87", "title": "combo_ct:3645, comboWR:61.32, combo+-:3.87, AB_AveWR:57.45", "to": "Traveling Botanist", "value": 3.87}, {"from": "Dragon Sniper", "label": "3.52", "title": "combo_ct:3318, comboWR:59.92, combo+-:3.52, AB_AveWR:56.4", "to": "Champion of Dusan", "value": 3.52}, {"from": "Dragon Sniper", "label": "4.03", "title": "combo_ct:4674, comboWR:61.38, combo+-:4.03, AB_AveWR:57.35", "to": "Piercing Exhale", "value": 4.03}, {"from": "Dragon Sniper", "label": "4.83", "title": "combo_ct:2172, comboWR:63.03, combo+-:4.83, AB_AveWR:58.2", "to": "Traveling Botanist", "value": 4.83}, {"from": "Piercing Exhale", "label": "3.2", "title": "combo_ct:2230, comboWR:58.7, combo+-:3.2, AB_AveWR:55.5", "to": "Encroaching Dragonstorm", "value": 3.2}, {"from": "Piercing Exhale", "label": "3.23", "title": "combo_ct:11459, comboWR:60.03, combo+-:3.23, AB_AveWR:56.8", "to": "Sagu Wildling", "value": 3.23}, {"from": "Piercing Exhale", "label": "3.91", "title": "combo_ct:9647, comboWR:60.11, combo+-:3.91, AB_AveWR:56.2", "to": "Sultai Devotee", "value": 3.91}, {"from": "Piercing Exhale", "label": "4.47", "title": "combo_ct:5774, comboWR:62.52, combo+-:4.47, AB_AveWR:58.05", "to": "Traveling Botanist", "value": 4.47}, {"from": "Traveling Botanist", "label": "4.69", "title": "combo_ct:1078, comboWR:61.04, combo+-:4.69, AB_AveWR:56.35", "to": "Encroaching Dragonstorm", "value": 4.69}, {"from": "Traveling Botanist", "label": "3.63", "title": "combo_ct:5375, comboWR:61.28, combo+-:3.63, AB_AveWR:57.65", "to": "Sagu Wildling", "value": 3.63}, {"from": "Traveling Botanist", "label": "3.12", "title": "combo_ct:3994, comboWR:60.17, combo+-:3.12, AB_AveWR:57.05", "to": "Sultai Devotee", "value": 3.12}, {"from": "Encroaching Dragonstorm", "label": "3.07", "title": "combo_ct:3347, comboWR:58.17, combo+-:3.07, AB_AveWR:55.1", "to": "Sagu Wildling", "value": 3.07}, {"from": "Roamer\u0027s Routine", "label": "3.16", "title": "combo_ct:1957, comboWR:56.06, combo+-:3.16, AB_AveWR:52.9", "to": "Undergrowth Leopard", "value": 3.16}, {"from": "Formation Breaker", "label": "6.0", "title": "combo_ct:1185, comboWR:61.6, combo+-:6.0, AB_AveWR:55.6", "to": "Synchronized Charge", "value": 6.0}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
